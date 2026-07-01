@@ -5,16 +5,12 @@ import type { BuildingId, CityStats } from '../lib/gameTypes';
 type Props = {
   stats: CityStats;
   onBuild: (id: BuildingId) => void;
-  onAddMoney: () => void;
 };
 
-export function BuildPanel({ stats, onBuild, onAddMoney }: Props) {
+export function BuildPanel({ stats, onBuild }: Props) {
   return (
     <section className="panel">
       <p className="eyebrow">Строительство</p>
-      <button type="button" className="dark cheat-button" onClick={onAddMoney}>
-        +10 миллионов
-      </button>
       <div className="build-grid">
         {buildings.map((building) => (
           <article className="build-card" key={building.id}>

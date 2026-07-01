@@ -38,11 +38,6 @@ export default function App() {
     updateCity((current) => build(current, id));
   };
 
-  const handleAddMoney = () => {
-    playSound('click');
-    updateCity((current) => ({ ...current, money: current.money + 10000000 }));
-  };
-
   const handleTaxChange = (delta: number) => {
     playSound('click');
     updateCity((current) => changeTax(current, delta));
@@ -119,7 +114,7 @@ export default function App() {
             />
           </div>
           <div className="right">
-            <BuildPanel stats={stats} onBuild={handleBuild} onAddMoney={handleAddMoney} />
+            <BuildPanel stats={stats} onBuild={handleBuild} />
             <IncomePanel stats={stats} />
             <NewsFeed news={stats.news} />
           </div>
