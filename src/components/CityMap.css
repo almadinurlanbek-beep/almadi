@@ -1,0 +1,25 @@
+.map-title { margin-bottom: 12px; }
+
+.city-3d-viewport {
+  background: #dbe7dd;
+  border: 1px solid #bfd1c5;
+  border-radius: 8px;
+  cursor: grab;
+  height: 520px;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.city-3d-viewport:active { cursor: grabbing; }
+
+.city-3d-viewport canvas {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+@media (max-width: 620px) {
+  .city-3d-viewport {
+    height: 350px;
+  }
+}

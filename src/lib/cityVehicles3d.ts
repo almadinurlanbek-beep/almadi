@@ -1,0 +1,141 @@
+import * as THREE from 'three';
+import { updateFireCrew, type FireCrewRig } from './cityFireCrew3d';
+import { tileToPosition } from './cityGrid3d';
+import { getResponseVehicleRoutes } from './cityResponseVehicleRoutes';
+import { getStopProgressBeforeLight, isRedLightForSegment } from './cityTrafficLights3d';
+import { createVehicleMesh, getVehicleClearance, getVehicleSpeed, type VehicleKind } from './cityVehicleConfig3d';
+import { firePatrolRoutes, policeRoutes, roadLaneOffset, trafficPlans, trafficRoutes } from './cityVehicleRoutes';
+import type { CityStats } from './gameTypes';
+
+export type MovingCar = {
+  kind: VehicleKind;
+  mesh: THREE.Group;
+  path: THREE.Vector3[];
+  speed: number;
+  routeProgress: number;
+  lastTime?: number;
+  laneOffset: number;
+  stopAtEnd: boolean;
+  deployedAt?: number;
+  wheels: THREE.Object3D[];
+  crew?: FireCrewRig;
+};
+
+export const addCarsToScene = (scene: THREE.Scene, stats: CityStats) => {
+  const cars: MovingCar[] = [];
+  const responseRoutes = getResponseVehicleRoutes(stats.activeIncident?.kind, stats.incidentResponses.map((response) => response.method));
+  responseRoutes.forEach((responseRoute, index) => {
+    cars.push(addCar(scene, responseRoute.kind, route(responseRoute.points), index * 2, true));
+  });
+  const policeOnCall = responseRoutes.filter((item) => item.kind === 'police').length;
+  const fireOnCall = responseRoutes.filter((item) => item.kind === 'fire').length;
+  const ambulanceOnCall = responseRoutes.filter((item) => item.kind === 'ambulance').length;
+  if (stats.buildings.hospitals > ambulanceOnCall) {
+    cars.push(addCar(scene, 'ambulance', route([[42, 4], [72, 4], [72, 24], [42, 24]]), 6, false));
+  }
+  addServiceCars(scene, cars, 'police', stats.buildings.police - policeOnCall, policeRoutes, 0, false);
+  if (stats.buildings.fireStations > fireOnCall) cars.push(addCar(scene, 'fire', getFirePatrolRoute(), 4, false));
+  addServiceCars(scene, cars, 'fire', Math.max(0, stats.buildings.fireStations - fireOnCall - 1), firePatrolRoutes, 18, false);
+  addTrafficCars(scene, cars);
+  return cars;
+};
+
+export const updateCars = (cars: MovingCar[], time: number) => {
+  let extinguishing = false;
+  const occupied: THREE.Vector3[] = [];
+  cars.forEach((car) => {
+    extinguishing = moveCar(car, time, occupied) || extinguishing;
+    occupied.push(car.mesh.position.clone());
+  });
+  return extinguishing;
+};
+
+const getFirePatrolRoute = () => route([[22, 34], [72, 34], [72, 64], [22, 64]]);
+
+const addTrafficCars = (scene: THREE.Scene, cars: MovingCar[]) => {
+  trafficPlans.forEach((plan) => {
+    cars.push(addCar(scene, plan.kind, route(trafficRoutes[plan.routeIndex]), plan.offset, false, plan.color, plan.laneOffset));
+  });
+};
+
+const addServiceCars = (
+  scene: THREE.Scene,
+  cars: MovingCar[],
+  kind: MovingCar['kind'],
+  count: number,
+  routes: [number, number][][],
+  baseOffset: number,
+  stopAtEnd: boolean,
+) => {
+  const visibleCount = Math.min(count, routes.length);
+  for (let index = 0; index < visibleCount; index += 1) {
+    cars.push(addCar(scene, kind, route(routes[index]), baseOffset + index * 5, stopAtEnd));
+  }
+};
+
+const route = (points: [number, number][]) => points.map(([x, y]) => tileToPosition(x, y, 0.45));
+
+const addCar = (
+  scene: THREE.Scene,
+  kind: MovingCar['kind'],
+  path: THREE.Vector3[],
+  offset: number,
+  stopAtEnd: boolean,
+  color = 0x4f79b8,
+  laneOffset = -roadLaneOffset,
+) => {
+  const mesh = createVehicleMesh(kind, color);
+  const speed = getVehicleSpeed(kind);
+  scene.add(mesh);
+  return {
+    kind,
+    mesh,
+    path,
+    speed,
+    routeProgress: offset * speed,
+    laneOffset,
+    stopAtEnd,
+    wheels: mesh.children.filter((item) => item.name === 'wheel'),
+    crew: kind === 'fire' ? mesh.userData.crew : undefined,
+  };
+};
+
+const moveCar = (car: MovingCar, time: number, occupied: THREE.Vector3[]) => {
+  const delta = car.lastTime === undefined ? 0 : Math.max(0, time - car.lastTime) * car.speed;
+  car.lastTime = time;
+  const total = car.routeProgress + delta;
+  const reachedTarget = car.stopAtEnd && total >= car.path.length - 1;
+  const segment = reachedTarget ? car.path.length - 2 : Math.floor(total) % car.path.length;
+  const next = reachedTarget ? car.path.length - 1 : (segment + 1) % car.path.length;
+  const progress = reachedTarget ? 1 : total % 1;
+  const direction = car.path[next].clone().sub(car.path[segment]);
+  const stopProgress = getStopProgressBeforeLight(car.path[segment], car.path[next]);
+  const redLightStop = !reachedTarget && stopProgress !== null && progress > stopProgress && isRedLightForSegment(car.path[segment], car.path[next], time);
+  const lane = new THREE.Vector3(-direction.z, 0, direction.x).normalize().multiplyScalar(car.laneOffset);
+  const nextPosition = car.path[segment].clone().lerp(car.path[next], redLightStop ? stopProgress : progress).add(lane);
+  const trafficStop = !reachedTarget && isPositionBlocked(nextPosition, occupied, getVehicleClearance(car.kind));
+  const shouldStop = redLightStop || trafficStop;
+  const safeProgress = redLightStop ? stopProgress : progress;
+  if (!shouldStop) car.routeProgress = total;
+  if (redLightStop) car.routeProgress = segment + safeProgress;
+  car.mesh.position.lerpVectors(car.path[segment], car.path[next], safeProgress).add(lane);
+  car.mesh.rotation.y = Math.atan2(direction.z, -direction.x) + (car.kind === 'ambulance' ? Math.PI : 0);
+  animateWheels(car, time, reachedTarget || shouldStop);
+  if (reachedTarget && car.deployedAt === undefined) car.deployedAt = time;
+  const deployProgress = car.deployedAt === undefined ? 0 : Math.min(1, (time - car.deployedAt) * 0.7);
+  updateFireCrew(car.crew, deployProgress, time);
+  return reachedTarget && car.kind === 'fire' && deployProgress >= 1;
+};
+
+const animateWheels = (car: MovingCar, time: number, stopped: boolean) => {
+  car.wheels.forEach((wheel, index) => {
+    const baseY = typeof wheel.userData.baseY === 'number' ? wheel.userData.baseY : wheel.position.y;
+    const suspension = stopped ? 0 : Math.sin(time * 7 + index * 1.8 + car.routeProgress) * 0.018;
+    wheel.position.y = THREE.MathUtils.lerp(wheel.position.y, baseY + suspension, 0.18);
+    if (!stopped) wheel.rotation.z -= car.speed * 4.5;
+  });
+};
+
+const isPositionBlocked = (position: THREE.Vector3, occupied: THREE.Vector3[], clearance: number) => {
+  return occupied.some((other) => other.distanceTo(position) < clearance);
+};

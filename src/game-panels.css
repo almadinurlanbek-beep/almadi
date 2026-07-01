@@ -1,0 +1,53 @@
+.country-panel {
+  align-items: end; display: grid; gap: 14px;
+  grid-template-columns: 1fr auto;
+}
+
+.country-panel strong { display: block; font-size: 20px; margin-top: 4px; }
+
+.team-grid {
+  display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr);
+  margin-top: 14px;
+}
+
+.team-grid button { display: grid; gap: 3px; padding: 9px 10px; text-align: left; }
+.team-grid small { color: rgba(255, 255, 255, 0.82); font-size: 11px; line-height: 1.25; }
+
+.responders-control {
+  align-items: center; display: grid; gap: 8px;
+  grid-template-columns: 1fr auto auto auto; margin-top: 14px;
+}
+
+.responders-control button { min-width: 38px; padding: 8px 10px; }
+
+.incident { border-left: 5px solid var(--gold); }
+.incident p { color: var(--soft); line-height: 1.5; margin: 10px 0; }
+.incident.calm { border-left-color: var(--accent); }
+.call-notice {
+  background: #fff4dc; border: 1px solid rgba(196, 139, 53, 0.35);
+  border-radius: 8px; color: #7c4b09; display: block;
+  font-size: 13px; margin-top: 12px; padding: 9px 10px;
+}
+
+.reward { display: grid; gap: 8px; margin-top: 14px; }
+.reward input { width: 100%; accent-color: var(--accent); }
+
+.news, .income-list {
+  display: grid; gap: 9px; list-style: none;
+  margin: 12px 0 0; padding: 0;
+}
+
+.news li, .income-list li {
+  background: rgba(255, 255, 255, 0.82); border: 1px solid var(--line);
+  border-radius: 8px; line-height: 1.4; padding: 10px 12px;
+}
+
+.income-panel { padding: 14px; }
+.income-total { color: var(--accent-dark); font-size: 22px; font-weight: 800; margin-top: 6px; }
+.income-list { grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+.income-list li { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; padding: 7px 8px; }
+.empty-news { color: var(--soft); line-height: 1.4; margin-top: 12px; }
+
+@media (max-width: 620px) {
+  .country-panel { grid-template-columns: 1fr; }
+}

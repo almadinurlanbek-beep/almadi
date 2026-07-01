@@ -1,0 +1,68 @@
+.start-menu {
+  align-items: center;
+  background:
+    linear-gradient(180deg, rgba(130, 193, 231, 0.96), rgba(238, 246, 252, 0.92)),
+    linear-gradient(180deg, #7db9df, #e5f2f8);
+  display: grid;
+  inset: 0;
+  justify-items: center;
+  min-height: 100vh;
+  overflow: hidden;
+  position: fixed;
+  transition: opacity 0.9s ease, transform 1.2s ease;
+  z-index: 10;
+}
+
+.start-menu.leaving {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-22px) scale(1.04);
+}
+
+.start-content {
+  color: #173147;
+  display: grid;
+  gap: 18px;
+  justify-items: center;
+  padding: 24px;
+  position: relative;
+  text-align: center;
+  z-index: 2;
+}
+
+.start-content h1 {
+  font-size: 56px;
+  text-shadow: 0 10px 30px rgba(23, 49, 71, 0.18);
+}
+
+.start-button { font-size: 18px; min-width: 190px; padding: 14px 22px; }
+
+.cloud {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 999px;
+  filter: drop-shadow(0 20px 28px rgba(61, 103, 129, 0.14));
+  height: 76px;
+  position: absolute;
+  width: 220px;
+}
+
+.cloud::before, .cloud::after {
+  background: inherit;
+  border-radius: 50%;
+  content: '';
+  position: absolute;
+}
+
+.cloud::before { height: 110px; left: 38px; top: -48px; width: 110px; }
+.cloud::after { height: 88px; right: 30px; top: -34px; width: 88px; }
+.cloud-a { left: 7%; top: 22%; animation: cloudDrift 14s ease-in-out infinite; }
+.cloud-b { right: 9%; top: 34%; transform: scale(1.25); animation: cloudDrift 18s ease-in-out infinite reverse; }
+.cloud-c { bottom: 18%; left: 32%; transform: scale(0.86); animation: cloudDrift 16s ease-in-out infinite; }
+.start-menu.leaving .cloud-a { transform: translateX(-180px) translateY(-30px); }
+.start-menu.leaving .cloud-b { transform: translateX(180px) translateY(-40px) scale(1.25); }
+.start-menu.leaving .cloud-c { transform: translateY(130px) scale(0.86); }
+
+@keyframes cloudDrift {
+  0%, 100% { margin-left: -18px; }
+  50% { margin-left: 18px; }
+}

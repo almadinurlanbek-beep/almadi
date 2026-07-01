@@ -1,0 +1,123 @@
+import type { Building, BuildingId, CityStats, Incident } from './gameTypes';
+import { getCountry } from './countries';
+
+export const buildings: Building[] = [
+  { id: 'shops', name: 'Магазин', icon: '🏪', cost: 10000, buildSeconds: 180, description: 'Стоит $10000, строится 3 мин.' },
+  { id: 'homes', name: 'Дома', icon: '🏠', cost: 3000, buildSeconds: 20, description: '+60 жителей, строится 20 сек.' },
+  { id: 'schools', name: 'Школа', icon: '🏫', cost: 20000, buildSeconds: 120, description: '+доверие и счастье, строится 2 мин.' },
+  { id: 'hospitals', name: 'Больница', icon: '🏥', cost: 20000, buildSeconds: 180, description: '+здоровье, строится 3 мин.' },
+  { id: 'police', name: 'Полиция', icon: '🚓', cost: 15000, buildSeconds: 180, description: '+безопасность, строится 3 мин.' },
+  { id: 'fireStations', name: 'Пожарная', icon: '🚒', cost: 9000, buildSeconds: 180, description: 'Слабее пожары, строится 3 мин.' },
+  { id: 'parks', name: 'Парк', icon: '🌳', cost: 20000, buildSeconds: 0, description: '+счастье, экология' },
+  { id: 'factories', name: 'Завод', icon: '🏭', cost: 50000, buildSeconds: 0, description: '+$300 в минуту, -здоровье' },
+  { id: 'malls', name: 'ТЦ', icon: '🛍️', cost: 100000, buildSeconds: 240, description: '+$900 в минуту, строится 4 мин.' },
+  { id: 'airports', name: 'Аэропорт', icon: '✈️', cost: 150000, buildSeconds: 300, description: '+$10000 за 5 мин. и доверие, строится 5 мин.' },
+  { id: 'stations', name: 'Вокзал', icon: '🚉', cost: 70000, buildSeconds: 180, description: '+доход и жители, строится 3 мин.' },
+];
+
+export const emptyBuildings: Record<BuildingId, number> = {
+  homes: 0,
+  schools: 0,
+  hospitals: 0,
+  police: 0,
+  fireStations: 0,
+  parks: 0,
+  factories: 0,
+  shops: 0,
+  malls: 0,
+  airports: 0,
+  stations: 0,
+};
+
+export const initialCity: CityStats = {
+  day: 1,
+  minuteOfDay: 480,
+  countryId: 'kazakhstan',
+  countryPopulation: 20000000,
+  money: 200000,
+  population: 820,
+  taxRate: 12,
+  happiness: 50,
+  health: 70,
+  safety: 50,
+  trust: 50,
+  buildings: emptyBuildings,
+  buildingPositions: {},
+  construction: [],
+  activeIncident: {
+    id: 'test-chase',
+    title: 'Погоня на городской дороге',
+    source: 'полиция',
+    report: 'Патруль заметил машину нарушителя. Она едет по дороге и не останавливается.',
+    truth: 'Нужна полиция: нарушителя можно остановить, если быстро отправить экипаж.',
+    severity: 3,
+    kind: 'chase',
+  },
+  incidentResponses: [],
+  news: ['Тест: на карте запущена погоня.'],
+};
+
+export const createInitialCity = (countryId: string): CityStats => ({
+  ...initialCity,
+  countryId,
+  countryPopulation: getCountry(countryId).population,
+  buildings: { ...emptyBuildings },
+  buildingPositions: {},
+  construction: [],
+  activeIncident: null,
+  incidentResponses: [],
+  news: [],
+});
+
+export const incidents: Omit<Incident, 'id' | 'severity'>[] = [
+  {
+    title: 'Погоня на городской дороге',
+    source: 'полиция',
+    report: 'Патруль заметил машину нарушителя. Она едет по дороге и не останавливается.',
+    truth: 'Нужна полиция: нарушителя можно остановить, если быстро отправить экипаж.',
+    kind: 'chase',
+  },
+  {
+    title: 'Пожар в жилом районе',
+    source: 'звонок жителя',
+    report: 'Очевидец говорит, что горит целый квартал. Данных мало.',
+    truth: 'Горит один дом, но огонь может перейти дальше.',
+    kind: 'fire',
+  },
+  {
+    title: 'Подозрительная сумка на вокзале',
+    source: 'камеры вокзала',
+    report: 'На платформе вокзала заметили оставленную сумку. Нужно проверить угрозу.',
+    truth: 'Сумка действительно подозрительная, район вокзала нужно быстро оцепить.',
+    requiredBuilding: 'stations',
+    kind: 'crime',
+  },
+  {
+    title: 'Теракт в центре города',
+    source: 'полиция',
+    report: 'Поступили тревожные сообщения из центра. Масштаб угрозы уточняется.',
+    truth: 'Угроза была настоящей, но часть слухов в сети оказалась ложной.',
+    kind: 'terror',
+  },
+  {
+    title: 'Вспышка болезни',
+    source: 'СМИ',
+    report: 'Новости пишут об эпидемии. Масштаб пока неизвестен.',
+    truth: 'Заболели несколько районов, нужна быстрая медицина.',
+    kind: 'epidemic',
+  },
+  {
+    title: 'Сбой роботизированной сети',
+    source: 'информатор',
+    report: 'Роботы доставки останавливаются и блокируют дороги.',
+    truth: 'Сбой настоящий, но его можно локализовать.',
+    kind: 'robots',
+  },
+  {
+    title: 'Городской протест',
+    source: 'полиция',
+    report: 'Люди требуют снизить налоги и решить проблему жилья.',
+    truth: 'Протест мирный, но может стать массовым.',
+    kind: 'protest',
+  },
+];
