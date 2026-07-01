@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-export const disposeScene = (scene: THREE.Scene) => {
+export const disposeScene = (scene: THREE.Object3D) => {
   scene.traverse((object) => {
     const mesh = object as THREE.Mesh;
     if (mesh.geometry) mesh.geometry.dispose();

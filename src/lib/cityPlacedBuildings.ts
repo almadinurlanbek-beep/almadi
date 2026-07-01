@@ -2,7 +2,7 @@ import { labels, modelByBuilding, variants } from './cityMapConfig';
 import type { MapTile } from './cityMap';
 import type { BuildingId, CityStats, TilePoint } from './gameTypes';
 
-export type PlacedLookup = Map<string, { buildingId: BuildingId; buildingIndex: number }>;
+export type PlacedLookup = Map<string, { buildingId: BuildingId; buildingIndex: number; rotation?: number }>;
 
 export const subtractPlacedBuildings = (remaining: Record<BuildingId, number>, positions: CityStats['buildingPositions']) => {
   Object.entries(positions).forEach(([buildingId, points]) => {
@@ -14,13 +14,13 @@ export const createPlacedLookup = (positions: CityStats['buildingPositions']) =>
   const lookup: PlacedLookup = new Map();
   Object.entries(positions).forEach(([buildingId, points]) => {
     points?.forEach((point: TilePoint, buildingIndex) => {
-      lookup.set(`${point.x}-${point.y}`, { buildingId: buildingId as BuildingId, buildingIndex });
+      lookup.set(`${point.x}-${point.y}`, { buildingId: buildingId as BuildingId, buildingIndex, rotation: point.rotation });
     });
   });
   return lookup;
 };
 
-export const createBuildingTile = (x: number, y: number, buildingId: BuildingId, buildingIndex: number): MapTile => {
+export const createBuildingTile = (x: number, y: number, buildingId: BuildingId, buildingIndex: number, rotation?: number): MapTile => {
   const model = modelByBuilding[buildingId];
   return {
     id: `${x}-${y}`,
@@ -30,6 +30,7 @@ export const createBuildingTile = (x: number, y: number, buildingId: BuildingId,
     count: 1,
     buildingId,
     buildingIndex,
+    rotation,
     model,
     variant: variants[model],
   };

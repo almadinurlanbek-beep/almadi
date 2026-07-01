@@ -1,5 +1,6 @@
 @import './game-panels.css';
 @import './start-menu.css';
+@import './start-auth.css';
 
 :root {
   --bg: #eef1ed; --panel: #fbfaf7; --ink: #18201d; --soft: #64706b;
@@ -75,7 +76,7 @@ small, .eyebrow { color: var(--soft); }
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(7, minmax(120px, 1fr));
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
   gap: 10px;
 }
 
@@ -137,6 +138,11 @@ select {
   margin-top: 12px;
 }
 
+.cheat-button {
+  margin-top: 12px;
+  width: 100%;
+}
+
 .build-card {
   align-items: center;
   display: flex;
@@ -170,4 +176,6 @@ select {
   .tax, .actions { align-items: stretch; flex-direction: column; }
   h1 { font-size: 28px; }
   .start-content h1 { font-size: 40px; }
+  .start-actions, .start-button { width: 100%; }
+  .start-help { font-size: 14px; }
 }

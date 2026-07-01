@@ -9,7 +9,8 @@ export type BuildingId =
   | 'shops'
   | 'malls'
   | 'airports'
-  | 'stations';
+  | 'stations'
+  | 'militaryBases';
 
 export type CityStats = {
   day: number;
@@ -18,6 +19,8 @@ export type CityStats = {
   countryPopulation: number;
   money: number;
   population: number;
+  level: number;
+  xp: number;
   taxRate: number;
   happiness: number;
   health: number;
@@ -34,6 +37,7 @@ export type CityStats = {
 export type TilePoint = {
   x: number;
   y: number;
+  rotation?: number;
 };
 
 export type Building = {
@@ -70,6 +74,8 @@ export type Incident = {
   report: string;
   truth: string;
   severity: number;
+  remainingSeconds: number;
+  tile?: TilePoint;
   requiredBuilding?: BuildingId;
   kind: 'fire' | 'flood' | 'crime' | 'chase' | 'epidemic' | 'robots' | 'protest' | 'terror';
 };

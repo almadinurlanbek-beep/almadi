@@ -11,10 +11,12 @@ import { addIncidentMarker, updateFireEffect, type FireEffect } from './cityInci
 import { createCountLabel } from './cityLabels3d';
 import { createMallBuilding } from './cityMallBuildings3d';
 import { getMallVariantAt } from './cityMallZone';
+import { createLargePark } from './cityPark3d';
 import { addPedestrians, updatePedestrians, type Pedestrian } from './cityPeople3d';
 import { addRailwayToScene, updateRailway, type Railway } from './cityRailway3d';
 import { addTrafficLights, updateTrafficLights, type TrafficLightRig } from './cityTrafficLights3d';
 import { createAirport, createStation } from './cityTransportBuildings3d';
+import { createParkTree, createVegetation } from './cityVegetation3d';
 import { addCarsToScene, updateCars, type MovingCar } from './cityVehicles3d';
 import type { CityStats } from './gameTypes';
 
@@ -39,12 +41,13 @@ export const buildCityScene = (scene: THREE.Scene, tiles: MapTile[], stats: City
     trafficLights: [],
   };
   scene.add(createGround(tiles));
+  scene.add(createVegetation(tiles));
   scene.add(createBridges());
   addCityHall(scene);
   addConstructionSites(scene, stats.construction);
   entities.trafficLights = addTrafficLights(scene, tiles);
   tiles.forEach((tile) => addTileObject(scene, entities, tile));
-  entities.fire = addIncidentMarker(scene, stats.activeIncident);
+  entities.fire = addIncidentMarker(scene, stats.activeIncident, stats.incidentResponses);
   entities.pedestrians = addPedestrians(scene, tiles);
   entities.cars = addCarsToScene(scene, stats);
   entities.railway = addRailwayToScene(scene, stats.buildings.stations);
@@ -55,7 +58,7 @@ const createGround = (tiles: MapTile[]) => {
   const group = new THREE.Group();
   const variants = ['lot', 'road', 'water', 'home', 'service', 'nature', 'work'] as const;
   const colors: Record<(typeof variants)[number], number> = {
-    lot: 0xb7ccb0,
+    lot: 0xa9c69d,
     road: 0x555d60,
     water: 0x4ea8b5,
     home: 0xd7c2a7,
@@ -108,13 +111,14 @@ const addTileObject = (scene: THREE.Scene, entities: SceneEntity, tile: MapTile)
   if (!tile.count && tile.model !== 'park') return;
   if (tile.model === 'lot' || tile.model === 'road' || tile.model === 'water') return;
   const position = tileToPosition(tile.x, tile.y, 0.1);
-  const model = tile.model === 'park' ? createGrassPatch(entities) : createBuilding(tile);
+  const model = tile.model === 'park' ? createParkModel(tile, entities) : createCityBuildingModel(tile);
+  if (tile.rotation !== undefined) model.rotation.y = tile.rotation;
   model.position.copy(position);
   scene.add(model);
   if (tile.count) scene.add(createCountLabel('1', position.clone().add(new THREE.Vector3(0, getLabelHeight(tile), 0))));
 };
 
-const createBuilding = (tile: MapTile) => {
+export const createCityBuildingModel = (tile: MapTile) => {
   const model = tile.model;
   if (model === 'factory') return createFactory();
   if (model === 'mall') return createMallBuilding(getMallVariantAt(tile.x, tile.y));
@@ -137,11 +141,15 @@ const faceCity = (model: THREE.Group, tile: MapTile) => {
 const getLabelHeight = (tile: MapTile) => {
   if (tile.model === 'mall' && getMallVariantAt(tile.x, tile.y) === 0) return 11.8;
   if (tile.model === 'mall') return 3.8;
+  if (tile.model === 'hospital') return 4.2;
+  if (tile.model === 'police' || tile.model === 'fire') return 5.4;
+  if (tile.model === 'park') return 3.4;
   return 2.8;
 };
 
 const createGrassPatch = (entities: SceneEntity) => {
   const group = new THREE.Group();
+  group.add(createParkTree());
   for (let index = 0; index < 12; index += 1) {
     const blade = new THREE.Mesh(
       new THREE.ConeGeometry(0.08, 0.55, 5),
@@ -152,6 +160,11 @@ const createGrassPatch = (entities: SceneEntity) => {
     entities.grass.push(blade);
   }
   return group;
+};
+
+const createParkModel = (tile: MapTile, entities: SceneEntity) => {
+  if (tile.count) return createLargePark();
+  return createGrassPatch(entities);
 };
 
 export const updateCityScene = (scene: THREE.Scene, entities: SceneEntity, time: number) => {

@@ -3,6 +3,8 @@ import { cellSize } from './cityGrid3d';
 
 const concrete = new THREE.MeshLambertMaterial({ color: 0xaeb6b8 });
 const line = new THREE.MeshLambertMaterial({ color: 0xf3d35b });
+const fence = new THREE.MeshLambertMaterial({ color: 0x2f3638 });
+const gate = new THREE.MeshLambertMaterial({ color: 0x59656a });
 
 export const createAirport = () => {
   const group = new THREE.Group();
@@ -12,17 +14,52 @@ export const createAirport = () => {
   const terminal = createTerminal();
   const tower = createTower();
   const parking = createParking();
+  const fenceGroup = createAirportFence(cellSize * 7.2, cellSize * 6.2);
 
   terminal.position.set(-cellSize * 1.5, 0, cellSize * 1.15);
   tower.position.set(cellSize * 1.6, 0, cellSize * 1.05);
   parking.position.set(cellSize * 1.8, 0.08, cellSize * 2);
-  group.add(footprint, runway, taxiway, terminal, tower, parking);
+  group.add(footprint, runway, taxiway, fenceGroup, terminal, tower, parking);
   group.add(createPlane(-cellSize * 1.7, -cellSize * 2.1, 0), createPlane(cellSize * 1.3, -cellSize * 2.1, Math.PI));
   group.add(createPlane(-cellSize * 0.2, -cellSize * 0.9, Math.PI / 2));
   addRunwayLines(group);
   group.scale.set(1, 1, 1);
   return group;
 };
+
+const createAirportFence = (width: number, depth: number) => {
+  const group = new THREE.Group();
+  const halfWidth = width / 2;
+  const halfDepth = depth / 2;
+  group.add(createFenceSegment(width, 0, -halfDepth));
+  group.add(createFenceSegment(width, 0, halfDepth));
+  group.add(createFenceSegment(depth, -halfWidth, 0, Math.PI / 2));
+  group.add(createFenceSegment(depth, halfWidth, 0, Math.PI / 2));
+  group.add(createBox(1.55, 0.68, 0.16, gate.color.getHex(), -0.88, 0.42, halfDepth + 0.04));
+  group.add(createBox(1.55, 0.68, 0.16, gate.color.getHex(), 0.88, 0.42, halfDepth + 0.04));
+  for (let index = 0; index <= 8; index += 1) {
+    const x = -halfWidth + index * (width / 8);
+    group.add(createFencePost(x, -halfDepth));
+    group.add(createFencePost(x, halfDepth));
+  }
+  for (let index = 1; index < 6; index += 1) {
+    const z = -halfDepth + index * (depth / 6);
+    group.add(createFencePost(-halfWidth, z));
+    group.add(createFencePost(halfWidth, z));
+  }
+  return group;
+};
+
+const createFenceSegment = (length: number, x: number, z: number, rotation = 0) => {
+  const group = new THREE.Group();
+  group.add(createBox(length, 0.12, 0.08, fence.color.getHex(), 0, 0.72, 0));
+  group.add(createBox(length, 0.12, 0.08, fence.color.getHex(), 0, 0.28, 0));
+  group.position.set(x, 0, z);
+  group.rotation.y = rotation;
+  return group;
+};
+
+const createFencePost = (x: number, z: number) => createBox(0.14, 1.05, 0.14, fence.color.getHex(), x, 0.54, z);
 
 export const createStation = () => {
   const group = new THREE.Group();

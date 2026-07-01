@@ -6,13 +6,34 @@ import { tileToPosition } from '../lib/cityGrid3d';
 import { pickTileFromPointer } from '../lib/cityMapPicking3d';
 import { createSkyBodies, updateSkyBodies } from '../lib/citySkyBodies3d';
 import { createCityTiles } from '../lib/cityMap';
-import type { CityStats, TilePoint } from '../lib/gameTypes';
+import { createBuildingDragPreview, removeBuildingDragPreview, updateBuildingDragPreview, type BuildingDragPreview } from '../lib/cityDragPreview3d';
+import type { BuildingId, CityStats, TilePoint } from '../lib/gameTypes';
 import { disposeScene } from '../lib/threeDispose';
 type DragMode = 'pan' | 'rotate' | 'zoom';
-export function CityMap3D({ stats, onTileClick }: { stats: CityStats; onTileClick: (point: TilePoint) => void }) {
+type DraggedBuilding = {
+  buildingId: BuildingId;
+  index: number;
+};
+type CameraOrbit = {
+  yaw: number;
+  distance: number;
+  height: number;
+};
+type Props = {
+  stats: CityStats;
+  onTileClick: (point: TilePoint) => void;
+  onBuildingDragStart: (point: TilePoint) => DraggedBuilding | null;
+  onBuildingDrop: (building: DraggedBuilding, point: TilePoint) => void;
+};
+
+export function CityMap3D({ stats, onTileClick, onBuildingDragStart, onBuildingDrop }: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const targetRef = useRef(tileToPosition(8, 8));
+  const orbitRef = useRef<CameraOrbit>({ yaw: 0.56, distance: 34, height: 30 });
   const minuteRef = useRef(stats.minuteOfDay);
+  const tileClickRef = useRef(onTileClick);
+  const dragStartRef = useRef(onBuildingDragStart);
+  const dropRef = useRef(onBuildingDrop);
   const sceneKey = useMemo(
     () => JSON.stringify({
       buildings: stats.buildings,
@@ -27,6 +48,11 @@ export function CityMap3D({ stats, onTileClick }: { stats: CityStats; onTileClic
     minuteRef.current = stats.minuteOfDay;
   }, [stats.minuteOfDay]);
   useEffect(() => {
+    tileClickRef.current = onTileClick;
+    dragStartRef.current = onBuildingDragStart;
+    dropRef.current = onBuildingDrop;
+  }, [onTileClick, onBuildingDragStart, onBuildingDrop]);
+  useEffect(() => {
     const host = hostRef.current;
     if (!host) return undefined;
     const scene = new THREE.Scene();
@@ -35,8 +61,8 @@ export function CityMap3D({ stats, onTileClick }: { stats: CityStats; onTileClic
     const fog = new THREE.Fog(initialLights.fog, 140, 360);
     scene.fog = fog;
     const camera = new THREE.PerspectiveCamera(48, host.clientWidth / host.clientHeight, 0.1, 420);
-    const orbit = { yaw: 0.56, distance: 34, height: 30 };
     const applyCamera = () => {
+      const orbit = orbitRef.current;
       camera.position.set(
         targetRef.current.x + Math.sin(orbit.yaw) * orbit.distance,
         orbit.height,
@@ -68,6 +94,11 @@ export function CityMap3D({ stats, onTileClick }: { stats: CityStats; onTileClic
       x: 0,
       y: 0,
     };
+    const buildingDrag: { active: boolean; item: DraggedBuilding | null } = {
+      active: false,
+      item: null,
+    };
+    let dragPreview: BuildingDragPreview | null = null;
     let moved = false;
     const resize = () => {
       camera.aspect = host.clientWidth / host.clientHeight;
@@ -83,6 +114,20 @@ export function CityMap3D({ stats, onTileClick }: { stats: CityStats; onTileClic
       frame = requestAnimationFrame(render);
     };
     const onPointerDown = (event: PointerEvent) => {
+      if (event.button === 0) {
+        const point = pickTileFromPointer(event, renderer.domElement, camera);
+        const building = point ? dragStartRef.current(point) : null;
+        if (building && point) {
+          buildingDrag.active = true;
+          buildingDrag.item = building;
+          removeBuildingDragPreview(scene, dragPreview);
+          dragPreview = createBuildingDragPreview(building.buildingId, point);
+          scene.add(dragPreview.mesh);
+          moved = false;
+          renderer.domElement.setPointerCapture(event.pointerId);
+          return;
+        }
+      }
       drag.active = true;
       drag.mode = event.button === 2 ? 'rotate' : event.button === 1 ? 'zoom' : 'pan';
       drag.x = event.clientX;
@@ -91,16 +136,23 @@ export function CityMap3D({ stats, onTileClick }: { stats: CityStats; onTileClic
       renderer.domElement.setPointerCapture(event.pointerId);
     };
     const onPointerMove = (event: PointerEvent) => {
+      if (buildingDrag.active) {
+        const point = pickTileFromPointer(event, renderer.domElement, camera);
+        if (point && dragPreview) updateBuildingDragPreview(dragPreview, point);
+        moved = true;
+        return;
+      }
       if (!drag.active) return;
       const dx = event.clientX - drag.x;
       const dy = event.clientY - drag.y;
       if (Math.abs(dx) + Math.abs(dy) > 4) moved = true;
       if (drag.mode === 'rotate') {
-        orbit.yaw -= dx * 0.01;
-        orbit.height = Math.max(14, Math.min(70, orbit.height + dy * 0.08));
+        orbitRef.current.yaw -= dx * 0.01;
+        orbitRef.current.height = Math.max(14, Math.min(70, orbitRef.current.height + dy * 0.08));
       } else if (drag.mode === 'zoom') {
-        orbit.distance = Math.max(12, Math.min(95, orbit.distance + dy * 0.12));
+        orbitRef.current.distance = Math.max(12, Math.min(95, orbitRef.current.distance + dy * 0.12));
       } else {
+        const orbit = orbitRef.current;
         const right = new THREE.Vector3(Math.cos(orbit.yaw), 0, -Math.sin(orbit.yaw));
         const forward = new THREE.Vector3(Math.sin(orbit.yaw), 0, Math.cos(orbit.yaw));
         targetRef.current.add(right.multiplyScalar(-dx * 0.09));
@@ -111,10 +163,19 @@ export function CityMap3D({ stats, onTileClick }: { stats: CityStats; onTileClic
     };
     const onWheel = (event: WheelEvent) => {
       event.preventDefault();
-      orbit.distance = Math.max(10, Math.min(110, orbit.distance + event.deltaY * 0.035));
-      orbit.height = Math.max(12, Math.min(82, orbit.height + event.deltaY * 0.018));
+      orbitRef.current.distance = Math.max(10, Math.min(110, orbitRef.current.distance + event.deltaY * 0.035));
+      orbitRef.current.height = Math.max(12, Math.min(82, orbitRef.current.height + event.deltaY * 0.018));
     };
     const stopDrag = (event: PointerEvent) => {
+      if (buildingDrag.active) {
+        const point = pickTileFromPointer(event, renderer.domElement, camera);
+        if (buildingDrag.item && point) dropRef.current(buildingDrag.item, point);
+        removeBuildingDragPreview(scene, dragPreview);
+        dragPreview = null;
+        buildingDrag.active = false;
+        buildingDrag.item = null;
+        return;
+      }
       const wasClick = drag.active && !moved && drag.mode === 'pan';
       drag.active = false;
       if (wasClick) pickTile(event);
@@ -122,7 +183,7 @@ export function CityMap3D({ stats, onTileClick }: { stats: CityStats; onTileClic
     const preventMenu = (event: MouseEvent) => event.preventDefault();
     const pickTile = (event: PointerEvent) => {
       const point = pickTileFromPointer(event, renderer.domElement, camera);
-      if (point) onTileClick(point);
+      if (point) tileClickRef.current(point);
     };
     let frame = requestAnimationFrame(render);
     window.addEventListener('resize', resize);
@@ -135,6 +196,7 @@ export function CityMap3D({ stats, onTileClick }: { stats: CityStats; onTileClic
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener('resize', resize);
+      removeBuildingDragPreview(scene, dragPreview);
       disposeScene(scene);
       renderer.dispose();
       host.replaceChildren();

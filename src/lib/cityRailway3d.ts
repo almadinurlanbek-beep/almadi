@@ -15,6 +15,7 @@ export type Railway = {
 };
 
 const depotTile = { x: 76, y: 42 };
+const depotTrackYs = [27, 31, 35, 39, 43, 47, 51, 55, 57];
 const railMaterial = new THREE.MeshLambertMaterial({ color: 0x2a3032 });
 const sleeperMaterial = new THREE.MeshLambertMaterial({ color: 0x6d5541 });
 const platformMaterial = new THREE.MeshLambertMaterial({ color: 0xb8b1a5 });
@@ -23,15 +24,15 @@ const depotMaterial = new THREE.MeshLambertMaterial({ color: 0x7b8588 });
 export const addRailwayToScene = (scene: THREE.Scene, stationCount: number): Railway => {
   if (stationCount <= 0) return { active: false, trains: [] };
   const group = new THREE.Group();
-  const routes = Array.from({ length: stationCount }, (_, index) => createRoute(index));
-  routes.forEach((route) => addTrack(group, route));
+  const route = createRailRoute(stationCount);
+  addTrack(group, route);
   group.add(createTrainDepot());
   scene.add(group);
 
-  const trains = routes.map((route, index) => {
+  const trains = [0, 1].map((index) => {
     const train = createMovingTrain(index);
     scene.add(train);
-    return { mesh: train, route, offset: index * 4, speed: 0.018 + index * 0.004 };
+    return { mesh: train, route, offset: index * 7, speed: 0.014 + index * 0.003 };
   });
   return { active: true, trains };
 };
@@ -45,15 +46,19 @@ export const updateRailway = (railway: Railway, time: number) => {
   });
 };
 
-const createRoute = (index: number) => {
-  const station = getStationAnchor(index);
-  const y = station.y + 1;
-  return [
-    tileToPosition(station.x + 2, y, 0.38),
-    tileToPosition(76, y, 0.38),
-    tileToPosition(depotTile.x, depotTile.y + (index - 1) * 4, 0.38),
-  ];
+const createRailRoute = (stationCount: number) => {
+  const stops = Array.from({ length: Math.min(stationCount, 3) }, (_, index) => getStationRailStop(index));
+  if (stops.length === 1) return toPositions([stops[0], { x: 72, y: stops[0].y }, { x: 72, y: 54 }, { x: 76, y: 54 }]);
+  if (stops.length === 2) return toPositions([stops[0], stops[1], { x: 72, y: stops[1].y }, { x: 72, y: 54 }, { x: 76, y: 54 }]);
+  return toPositions([stops[0], stops[1], { x: 52, y: 24 }, { x: 52, y: 54 }, stops[2], { x: 76, y: 54 }]);
 };
+
+const getStationRailStop = (index: number) => {
+  const station = getStationAnchor(index);
+  return { x: station.x + 2, y: station.y < 40 ? 24 : 54 };
+};
+
+const toPositions = (points: { x: number; y: number }[]) => points.map((point) => tileToPosition(point.x, point.y, 0.38));
 
 const addTrack = (group: THREE.Group, route: THREE.Vector3[]) => {
   for (let index = 0; index < route.length - 1; index += 1) {
@@ -90,12 +95,14 @@ const createRailSegment = (center: THREE.Vector3, length: number, horizontal: bo
 const createTrainDepot = () => {
   const group = new THREE.Group();
   group.position.copy(tileToPosition(depotTile.x, depotTile.y, 0.16));
-  group.add(box(cellSize * 6.4, 0.08, cellSize * 11, depotMaterial, 0, 0, 0));
-  group.add(box(cellSize * 5.8, 0.12, 0.55, platformMaterial, -0.2, 0.12, -cellSize * 3));
-  group.add(box(cellSize * 5.8, 0.12, 0.55, platformMaterial, -0.2, 0.12, 0));
-  group.add(box(cellSize * 5.8, 0.12, 0.55, platformMaterial, -0.2, 0.12, cellSize * 3));
-  group.add(createParkedTrain(-1.2, -cellSize * 3.65, 0x416c99));
-  group.add(createParkedTrain(0.8, cellSize * 3.65, 0x7a4e9b));
+  group.add(box(cellSize * 7.2, 0.08, cellSize * 17.2, depotMaterial, 0, 0, 0));
+  depotTrackYs.forEach((tileY, index) => {
+    const z = (tileY - depotTile.y) * cellSize;
+    group.add(box(cellSize * 6.5, 0.05, 0.07, railMaterial, -0.15, 0.17, z - 0.25));
+    group.add(box(cellSize * 6.5, 0.05, 0.07, railMaterial, -0.15, 0.17, z + 0.25));
+    group.add(box(cellSize * 5.8, 0.1, 0.4, platformMaterial, 0, 0.12, z + 0.62));
+    if (index % 2 === 0) group.add(createParkedTrain(-1.2 + (index % 3) * 0.9, z, 0x416c99 + index * 0x050505));
+  });
   return group;
 };
 

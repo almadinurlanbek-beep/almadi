@@ -37,6 +37,7 @@ export function IncidentPanel({ stats, reward, responders, onRewardChange, onRes
       <h2>{incident ? incident.title : 'Кризисов нет'}</h2>
       <p>{incident ? incident.report : 'Службы готовы, но вызывать их можно только на реальное происшествие.'}</p>
       {incident && <small>Угроза: {incident.severity}/5. Информация может быть неполной или ложной.</small>}
+      {incident && <strong className="call-notice">Осталось: {formatIncidentTime(incident.remainingSeconds ?? 120)}</strong>}
       {investigating && <strong className="call-notice">Статус: расследование</strong>}
       {responses.length > 0 && <strong className="call-notice">В работе: {getResponsesText(responses)}</strong>}
       {notice && <strong className="call-notice">{notice}</strong>}
@@ -97,6 +98,12 @@ const getResponseLabel = (method: ResponseMethod) => {
   if (method === 'reward') return 'Награда за информацию';
   if (method === 'cameras') return 'Поиск информации';
   return responseTeams.find((team) => team.method === method)?.name ?? 'Служба';
+};
+
+const formatIncidentTime = (seconds: number) => {
+  const safeSeconds = Math.max(0, seconds);
+  const minutes = Math.floor(safeSeconds / 60);
+  return `${minutes}:${(safeSeconds % 60).toString().padStart(2, '0')}`;
 };
 
 const isInvestigationResponse = (response: CityStats['incidentResponses'][number]) => {

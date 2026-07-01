@@ -13,6 +13,7 @@ export const buildings: Building[] = [
   { id: 'malls', name: 'ТЦ', icon: '🛍️', cost: 100000, buildSeconds: 240, description: '+$900 в минуту, строится 4 мин.' },
   { id: 'airports', name: 'Аэропорт', icon: '✈️', cost: 150000, buildSeconds: 300, description: '+$10000 за 5 мин. и доверие, строится 5 мин.' },
   { id: 'stations', name: 'Вокзал', icon: '🚉', cost: 70000, buildSeconds: 180, description: '+доход и жители, строится 3 мин.' },
+  { id: 'militaryBases', name: 'Военная база', icon: '🪖', cost: 500000, buildSeconds: 240, description: '+безопасность и доверие, строится 4 мин.' },
 ];
 
 export const emptyBuildings: Record<BuildingId, number> = {
@@ -27,6 +28,7 @@ export const emptyBuildings: Record<BuildingId, number> = {
   malls: 0,
   airports: 0,
   stations: 0,
+  militaryBases: 0,
 };
 
 export const initialCity: CityStats = {
@@ -36,6 +38,8 @@ export const initialCity: CityStats = {
   countryPopulation: 20000000,
   money: 200000,
   population: 820,
+  level: 1,
+  xp: 0,
   taxRate: 12,
   happiness: 50,
   health: 70,
@@ -51,6 +55,7 @@ export const initialCity: CityStats = {
     report: 'Патруль заметил машину нарушителя. Она едет по дороге и не останавливается.',
     truth: 'Нужна полиция: нарушителя можно остановить, если быстро отправить экипаж.',
     severity: 3,
+    remainingSeconds: 120,
     kind: 'chase',
   },
   incidentResponses: [],
@@ -61,6 +66,8 @@ export const createInitialCity = (countryId: string): CityStats => ({
   ...initialCity,
   countryId,
   countryPopulation: getCountry(countryId).population,
+  level: 1,
+  xp: 0,
   buildings: { ...emptyBuildings },
   buildingPositions: {},
   construction: [],
@@ -69,7 +76,7 @@ export const createInitialCity = (countryId: string): CityStats => ({
   news: [],
 });
 
-export const incidents: Omit<Incident, 'id' | 'severity'>[] = [
+export const incidents: Omit<Incident, 'id' | 'severity' | 'remainingSeconds'>[] = [
   {
     title: 'Погоня на городской дороге',
     source: 'полиция',

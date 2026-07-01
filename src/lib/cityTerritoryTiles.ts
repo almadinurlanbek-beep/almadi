@@ -12,10 +12,11 @@ type TerritoryTileOptions = {
   variant: TileVariant;
   buildingId: BuildingId;
   remaining: Record<BuildingId, number>;
+  buildingIndex?: number;
 };
 
 export const createTerritoryTile = (options: TerritoryTileOptions): MapTile => {
-  const buildingIndex = options.remaining[options.buildingId] - 1;
+  const buildingIndex = options.buildingIndex ?? options.remaining[options.buildingId] - 1;
   if (options.isAnchor) options.remaining[options.buildingId] -= 1;
   return {
     id: `${options.x}-${options.y}`,

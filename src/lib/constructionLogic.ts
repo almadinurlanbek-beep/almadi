@@ -1,4 +1,5 @@
 import { buildings } from './gameData';
+import { addCityXp, getXpForBuilding } from './cityLevel';
 import type { BuildingId, CityStats } from './gameTypes';
 
 const MAX_HAPPINESS = 92;
@@ -19,20 +20,7 @@ export const startBuild = (stats: CityStats, id: BuildingId): CityStats => {
   if (!item || stats.money < item.cost) return stats;
 
   const next = { ...stats, money: stats.money - item.cost };
-  if (item.buildSeconds <= 0) return completeBuilding(next, id);
-
-  return {
-    ...next,
-    construction: [
-      ...stats.construction,
-      {
-        id: `${Date.now()}-${Math.random()}`,
-        buildingId: id,
-        remainingSeconds: item.buildSeconds,
-        totalSeconds: item.buildSeconds,
-      },
-    ],
-  };
+  return completeBuilding(next, id);
 };
 
 export const advanceConstruction = (stats: CityStats): CityStats => {
@@ -47,11 +35,12 @@ export const advanceConstruction = (stats: CityStats): CityStats => {
 };
 
 const completeBuilding = (stats: CityStats, id: BuildingId): CityStats => {
+  const currentCount = Number.isFinite(stats.buildings[id]) ? stats.buildings[id] : 0;
   const next = {
     ...stats,
-    buildings: { ...stats.buildings, [id]: stats.buildings[id] + 1 },
+    buildings: { ...stats.buildings, [id]: currentCount + 1 },
   };
-  return applyBuildingEffect(next, id);
+  return applyLevelProgress(applyBuildingEffect(next, id), id);
 };
 
 const applyBuildingEffect = (stats: CityStats, id: BuildingId): CityStats => {
@@ -67,6 +56,14 @@ const applyBuildingEffect = (stats: CityStats, id: BuildingId): CityStats => {
     malls: { happiness: changeHappiness(stats.happiness, 3), trust: clampTrust(stats.trust + 1) },
     airports: { trust: clampTrust(stats.trust + 5), happiness: changeHappiness(stats.happiness, 2) },
     stations: { population: stats.population + 120, trust: clampTrust(stats.trust + 2) },
+    militaryBases: { safety: clampSafety(stats.safety + 10), trust: clampTrust(stats.trust + 3) },
   };
   return { ...stats, ...effects[id] };
+};
+
+const applyLevelProgress = (stats: CityStats, id: BuildingId): CityStats => {
+  const result = addCityXp(stats, getXpForBuilding(id));
+  if (result.rewards.length === 0) return result.stats;
+  const rewardNews = result.rewards.map((level) => `Город достиг ${level} уровня и получил $10000.`);
+  return { ...result.stats, news: [...rewardNews, ...stats.news].slice(0, 7) };
 };

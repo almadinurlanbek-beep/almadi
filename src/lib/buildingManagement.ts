@@ -1,4 +1,6 @@
 import { buildings } from './gameData';
+import { getOccupiedBuildingCells, getSafeBuildingPoint } from './cityBuildingPlacement';
+import { getConstructionTile } from './cityMap';
 import type { BuildingId, CityStats, TilePoint } from './gameTypes';
 
 export const refundBuilding = (stats: CityStats, buildingId: BuildingId, index: number) => {
@@ -19,7 +21,23 @@ export const refundBuilding = (stats: CityStats, buildingId: BuildingId, index: 
 export const moveBuilding = (stats: CityStats, buildingId: BuildingId, index: number, point: TilePoint) => {
   if (stats.buildings[buildingId] <= index) return stats;
   const positions = [...(stats.buildingPositions[buildingId] ?? [])];
-  positions[index] = point;
+  const occupied = getOccupiedBuildingCells(stats.buildingPositions, { buildingId, index });
+  positions[index] = getSafeBuildingPoint(buildingId, index, { ...point, rotation: positions[index]?.rotation }, occupied);
+  return {
+    ...stats,
+    buildingPositions: {
+      ...stats.buildingPositions,
+      [buildingId]: positions,
+    },
+  };
+};
+
+export const rotateBuilding = (stats: CityStats, buildingId: BuildingId, index: number, point: TilePoint) => {
+  if (stats.buildings[buildingId] <= index) return stats;
+  const positions = [...(stats.buildingPositions[buildingId] ?? [])];
+  const current = positions[index] ?? point ?? getConstructionTile(buildingId, index);
+  const nextRotation = ((current.rotation ?? 0) + Math.PI / 2) % (Math.PI * 2);
+  positions[index] = { ...current, x: Math.round(current.x), y: Math.round(current.y), rotation: nextRotation };
   return {
     ...stats,
     buildingPositions: {

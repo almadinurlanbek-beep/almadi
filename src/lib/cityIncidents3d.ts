@@ -3,7 +3,7 @@ import { updateChaseMover } from './cityChaseModel3d';
 import { addIncidentModel, createIncidentLabel } from './cityIncidentModels3d';
 import { fireTile, tileToPosition } from './cityGrid3d';
 import { getStationAnchor } from './cityStationZone';
-import type { Incident } from './gameTypes';
+import type { CityStats, Incident } from './gameTypes';
 
 export type FireEffect = {
   flames: THREE.Object3D[];
@@ -24,13 +24,13 @@ export const incidentTiles: Record<Incident['kind'], { x: number; y: number }> =
   terror: { x: 49, y: 39 },
 };
 
-export const addIncidentMarker = (scene: THREE.Scene, incident: Incident | null) => {
+export const addIncidentMarker = (scene: THREE.Scene, incident: Incident | null, responses: CityStats['incidentResponses'] = []) => {
   if (!incident) return null;
   const effect: FireEffect = { flames: [], marker: createIncidentLabel(incident.kind), movers: [], smoke: [], water: [] };
   const group = new THREE.Group();
-  const tile = incidentTiles[incident.kind];
+  const tile = incident.tile ?? incidentTiles[incident.kind];
   group.position.copy(tileToPosition(tile.x, tile.y, 0.14));
-  addIncidentModel(group, effect, incident.kind);
+  addIncidentModel(group, effect, incident.kind, responses);
   effect.marker.position.set(0, 2.45, 0);
   group.add(effect.marker);
   scene.add(group);

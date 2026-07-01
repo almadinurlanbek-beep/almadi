@@ -6,10 +6,10 @@ export type ParkZone = {
 };
 
 const parkZones: ParkZone[] = [
-  { anchorX: 8, anchorY: 16, width: 5, height: 4 },
-  { anchorX: 28, anchorY: 36, width: 5, height: 4 },
-  { anchorX: 58, anchorY: 16, width: 5, height: 4 },
-  { anchorX: 68, anchorY: 66, width: 5, height: 4 },
+  { anchorX: 7, anchorY: 19, width: 9, height: 9 },
+  { anchorX: 27, anchorY: 39, width: 9, height: 9 },
+  { anchorX: 57, anchorY: 19, width: 9, height: 9 },
+  { anchorX: 67, anchorY: 69, width: 9, height: 9 },
 ];
 
 export const getParkAnchor = (index: number) => {

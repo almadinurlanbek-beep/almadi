@@ -8,7 +8,7 @@ import { IncomePanel } from './components/IncomePanel';
 import { NewsFeed } from './components/NewsFeed';
 import { StartMenu } from './components/StartMenu';
 import { TaxPanel } from './components/TaxPanel';
-import { moveBuilding, refundBuilding } from './lib/buildingManagement';
+import { moveBuilding, refundBuilding, rotateBuilding } from './lib/buildingManagement';
 import { createInitialCity } from './lib/gameData';
 import { advanceTime, build, changeTax, resolveIncident } from './lib/gameLogic';
 import { loadSavedCities, saveCities } from './lib/citySaves';
@@ -38,6 +38,11 @@ export default function App() {
     updateCity((current) => build(current, id));
   };
 
+  const handleAddMoney = () => {
+    playSound('click');
+    updateCity((current) => ({ ...current, money: current.money + 10000000 }));
+  };
+
   const handleTaxChange = (delta: number) => {
     playSound('click');
     updateCity((current) => changeTax(current, delta));
@@ -65,6 +70,11 @@ export default function App() {
   const handleMoveBuilding = (buildingId: BuildingId, index: number, point: TilePoint) => {
     playSound('build');
     updateCity((current) => moveBuilding(current, buildingId, index, point));
+  };
+
+  const handleRotateBuilding = (buildingId: BuildingId, index: number, point: TilePoint) => {
+    playSound('click');
+    updateCity((current) => rotateBuilding(current, buildingId, index, point));
   };
 
   const handleStart = () => {
@@ -98,7 +108,7 @@ export default function App() {
           <div className="left">
             <CountryPanel stats={stats} onCountryChange={handleCountryChange} />
             <TaxPanel taxRate={stats.taxRate} onTaxChange={handleTaxChange} />
-            <CityMap stats={stats} onDeleteBuilding={handleDeleteBuilding} onMoveBuilding={handleMoveBuilding} />
+            <CityMap stats={stats} onDeleteBuilding={handleDeleteBuilding} onMoveBuilding={handleMoveBuilding} onRotateBuilding={handleRotateBuilding} />
             <IncidentPanel
               stats={stats}
               reward={reward}
@@ -109,7 +119,7 @@ export default function App() {
             />
           </div>
           <div className="right">
-            <BuildPanel stats={stats} onBuild={handleBuild} />
+            <BuildPanel stats={stats} onBuild={handleBuild} onAddMoney={handleAddMoney} />
             <IncomePanel stats={stats} />
             <NewsFeed news={stats.news} />
           </div>

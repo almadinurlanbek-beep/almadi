@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { addChaseModel } from './cityChaseModel3d';
 import { addProtestCrowd } from './cityProtestModel3d';
+import { addTerrorModel } from './cityTerrorModel3d';
 import type { FireEffect } from './cityIncidents3d';
-import type { Incident } from './gameTypes';
+import type { CityStats, Incident } from './gameTypes';
 
 const incidentIcons: Record<Incident['kind'], string> = {
   fire: '!',
@@ -15,15 +16,21 @@ const incidentIcons: Record<Incident['kind'], string> = {
   terror: '!',
 };
 
-export const addIncidentModel = (group: THREE.Group, effect: FireEffect, kind: Incident['kind']) => {
+export const addIncidentModel = (group: THREE.Group, effect: FireEffect, kind: Incident['kind'], responses: CityStats['incidentResponses']) => {
   if (kind === 'fire') addFireModel(group, effect);
   if (kind === 'flood') addFloodModel(group, effect);
   if (kind === 'crime') addCrimeModel(group, effect);
-  if (kind === 'chase') addChaseModel(group, effect);
+  if (kind === 'chase') addChaseModel(group, effect, getPoliceResponderCount(responses));
   if (kind === 'epidemic') addEpidemicModel(group, effect);
   if (kind === 'robots') addRobotModel(group, effect);
   if (kind === 'protest') addProtestModel(group, effect);
-  if (kind === 'terror') addDangerModel(group, effect);
+  if (kind === 'terror') addTerrorModel(group, effect);
+};
+
+const getPoliceResponderCount = (responses: CityStats['incidentResponses']) => {
+  return responses
+    .filter((response) => response.method === 'police')
+    .reduce((total, response) => total + response.people, 0);
 };
 
 export const createIncidentLabel = (kind: Incident['kind']) => {
@@ -109,11 +116,4 @@ const addRobotModel = (group: THREE.Group, effect: FireEffect) => {
 
 const addProtestModel = (group: THREE.Group, effect: FireEffect) => {
   addProtestCrowd(group, effect);
-};
-
-const addDangerModel = (group: THREE.Group, effect: FireEffect) => {
-  const pulse = new THREE.Mesh(new THREE.OctahedronGeometry(0.48), new THREE.MeshBasicMaterial({ color: 0xb72e35, transparent: true, opacity: 0.8 }));
-  pulse.position.y = 0.55;
-  group.add(pulse);
-  effect.movers.push(pulse);
 };

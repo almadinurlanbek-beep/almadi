@@ -2,7 +2,9 @@
 import { getAirportAnchor } from './cityAirportZone';
 import { getBuildableTile } from './cityBuildableTile';
 import { getMallAnchor } from './cityMallZone';
+import { getMilitaryAnchor } from './cityMilitaryZone';
 import { getParkAnchor } from './cityParkZone';
+import { createPlacedParkZoneTile } from './cityPlacedParkZones';
 import { createBuildingTile, createPlacedLookup, subtractPlacedBuildings, type PlacedLookup } from './cityPlacedBuildings';
 import { createServiceClearance } from './cityServiceClearance';
 import { createSpecialZoneTile } from './citySpecialZones';
@@ -22,7 +24,8 @@ export type TileKey =
   | 'shop'
   | 'factory'
   | 'airport'
-  | 'station';
+  | 'station'
+  | 'military';
 export type TileVariant = 'lot' | 'road' | 'home' | 'service' | 'nature' | 'work' | 'water';
 export type MapTile = {
   id: string;
@@ -32,6 +35,7 @@ export type MapTile = {
   count?: number;
   buildingId?: BuildingId;
   buildingIndex?: number;
+  rotation?: number;
   model: TileKey;
   variant: TileVariant;
 };
@@ -45,6 +49,7 @@ export const getConstructionTile = (buildingId: BuildingId, index: number) => {
   if (buildingId === 'stations') return getBuildableTile(getStationAnchor(index), isBlockedCell);
   if (buildingId === 'parks') return getBuildableTile(getParkAnchor(index), isBlockedCell);
   if (buildingId === 'malls') return getBuildableTile(getMallAnchor(index), isBlockedCell);
+  if (buildingId === 'militaryBases') return getBuildableTile(getMilitaryAnchor(index), isBlockedCell);
   const target = modelByBuilding[buildingId];
   let matched = 0;
   for (let y = 0; y < MAP_SIZE; y += 1) {
@@ -54,7 +59,7 @@ export const getConstructionTile = (buildingId: BuildingId, index: number) => {
       matched += 1;
     }
   }
-  return { x: 8 + index, y: 8 };
+  return getBuildableTile({ x: 8 + index, y: 8 }, isBlockedCell);
 };
 const isBlockedCell = (x: number, y: number) => isRoadCell(x, y) || isWaterCell(x, y);
 export const createCityTiles = (stats: CityStats): MapTile[] => {
@@ -62,10 +67,14 @@ export const createCityTiles = (stats: CityStats): MapTile[] => {
   const remaining = { ...stats.buildings };
   const placed = createPlacedLookup(stats.buildingPositions);
   subtractPlacedBuildings(remaining, stats.buildingPositions);
-  const airportCount = stats.buildings.airports;
-  const stationCount = stats.buildings.stations;
-  const parkCount = stats.buildings.parks;
-  const mallCount = stats.buildings.malls;
+  const buildingIndexes = createAvailableBuildingIndexes(totals, stats.buildingPositions);
+  const takeBuildingIndex = (buildingId: BuildingId) => buildingIndexes[buildingId].shift() ?? 0;
+  const airportCount = Math.max(0, remaining.airports);
+  const stationCount = Math.max(0, remaining.stations);
+  const parkCount = Math.max(0, remaining.parks);
+  const mallCount = Math.max(0, remaining.malls);
+  const militaryBaseCount = Math.max(0, remaining.militaryBases);
+  reserveSpecialZoneBuildings(remaining);
   const serviceClearance = createServiceClearance({
     counts: totals,
     positions: stats.buildingPositions,
@@ -76,13 +85,13 @@ export const createCityTiles = (stats: CityStats): MapTile[] => {
   return Array.from({ length: getCityTileCount() }, (_, index) => {
     const x = index % MAP_SIZE;
     const y = Math.floor(index / MAP_SIZE);
-    return createTile(x, y, totals, remaining, placed, serviceClearance, airportCount, stationCount, parkCount, mallCount);
+    return createTile(x, y, stats.buildingPositions, remaining, placed, serviceClearance, airportCount, stationCount, parkCount, mallCount, militaryBaseCount, takeBuildingIndex);
   });
 };
 const createTile = (
   x: number,
   y: number,
-  totals: Record<BuildingId, number>,
+  positions: CityStats['buildingPositions'],
   remaining: Record<BuildingId, number>,
   placed: PlacedLookup,
   serviceClearance: Set<string>,
@@ -90,14 +99,25 @@ const createTile = (
   stationCount: number,
   parkCount: number,
   mallCount: number,
+  militaryBaseCount: number,
+  takeBuildingIndex: (buildingId: BuildingId) => number,
 ): MapTile => {
+  const placedParkTile = createPlacedParkZoneTile(x, y, positions, isBlockedCell);
+  if (placedParkTile) return placedParkTile;
   const placedBuilding = placed.get(`${x}-${y}`);
-  if (placedBuilding) return createBuildingTile(x, y, placedBuilding.buildingId, placedBuilding.buildingIndex);
-  const specialTile = createSpecialZoneTile(x, y, remaining, { airports: airportCount, stations: stationCount, parks: parkCount, malls: mallCount }, isBlockedCell);
+  if (placedBuilding) return createBuildingTile(x, y, placedBuilding.buildingId, placedBuilding.buildingIndex, placedBuilding.rotation);
+  const specialTile = createSpecialZoneTile(
+    x,
+    y,
+    remaining,
+    { airports: airportCount, stations: stationCount, parks: parkCount, malls: mallCount, militaryBases: militaryBaseCount },
+    isBlockedCell,
+    takeBuildingIndex,
+  );
   if (specialTile) return specialTile;
   const model = pickTileModel(x, y, remaining, serviceClearance);
   const buildingId = getBuildingId(model);
-  const buildingIndex = buildingId ? totals[buildingId] - remaining[buildingId] : undefined;
+  const buildingIndex = buildingId ? takeBuildingIndex(buildingId) : undefined;
   if (buildingId) remaining[buildingId] -= 1;
   return {
     id: `${x}-${y}`,
@@ -120,7 +140,7 @@ const pickTileModel = (x: number, y: number, remaining: Record<BuildingId, numbe
   return buildingId && remaining[buildingId] > 0 ? planned : 'lot';
 };
 const getPlannedBuilding = (x: number, y: number): TileKey => {
-  const pattern = (x * 7 + y * 11) % 24;
+  const pattern = (x * 7 + y * 11) % 26;
   if (pattern < 9) return 'home';
   if (pattern < 12) return 'park';
   if (pattern < 14) return 'mall';
@@ -132,9 +152,30 @@ const getPlannedBuilding = (x: number, y: number): TileKey => {
   if (pattern === 20) return 'station';
   if (pattern === 21) return 'airport';
   if (pattern === 22) return 'shop';
+  if (pattern === 23) return 'military';
   return 'lot';
 };
 const getBuildingId = (model: TileKey) => {
   if (model === 'lot' || model === 'road' || model === 'water') return null;
   return buildingMap[model];
+};
+
+const createAvailableBuildingIndexes = (
+  totals: Record<BuildingId, number>,
+  positions: CityStats['buildingPositions'],
+) => {
+  const result = {} as Record<BuildingId, number[]>;
+  (Object.keys(totals) as BuildingId[]).forEach((buildingId) => {
+    const used = new Set((positions[buildingId] ?? []).map((_, index) => index));
+    result[buildingId] = Array.from({ length: totals[buildingId] }, (_, index) => index).filter((index) => !used.has(index));
+  });
+  return result;
+};
+
+const reserveSpecialZoneBuildings = (remaining: Record<BuildingId, number>) => {
+  remaining.airports = 0;
+  remaining.stations = 0;
+  remaining.parks = 0;
+  remaining.malls = 0;
+  remaining.militaryBases = 0;
 };

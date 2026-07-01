@@ -1,12 +1,14 @@
 ﻿import { createInitialCity, incidents } from './gameData';
 import { advanceConstruction, startBuild } from './constructionLogic';
 import { getMinuteIncome, getTaxIncome } from './economy';
+import { getConstructionTile, isRoadCell, isWaterCell } from './cityMap';
 import { advanceIncidentResponse, startIncidentResponse } from './incidentResponseLogic';
 import { getAlertText } from './incidentAlerts';
-import type { CityStats, Incident, ResponseMethod } from './gameTypes';
+import type { CityStats, Incident, ResponseMethod, TilePoint } from './gameTypes';
 
 const DAY_MINUTES = 1440;
 const INCIDENT_INTERVAL = 360;
+const INCIDENT_DURATION_SECONDS = 120;
 const TEN_DAY_BONUS = 5000;
 const RESIDENT_PAYOUT_INTERVAL = 10;
 const RESIDENT_PAYOUT_RATE = 0.05;
@@ -96,7 +98,9 @@ const updateCountryPopulation = (stats: CityStats): CityStats => {
 };
 
 export const advanceTime = (stats: CityStats): CityStats => {
-  if (stats.incidentResponses.length > 0) return resetIfDefeated(advanceConstruction(advanceIncidentResponse(stats)));
+  if (stats.incidentResponses.length > 0) {
+    return resetIfDefeated(advanceConstruction(tickIncidentTimer(advanceIncidentResponse(stats))));
+  }
 
   const steps = stats.activeIncident ? 1 : 3;
   let next = stats;
@@ -106,7 +110,7 @@ export const advanceTime = (stats: CityStats): CityStats => {
     if (next.activeIncident) break;
   }
 
-  return resetIfDefeated(advanceConstruction(next));
+  return resetIfDefeated(advanceConstruction(tickIncidentTimer(next)));
 };
 
 const startNewDay = (stats: CityStats): CityStats => {
@@ -146,12 +150,50 @@ const punishUnresolvedIncident = (stats: CityStats): CityStats => ({
 });
 
 const createIncident = (stats: CityStats): Incident => {
-  const availableIncidents = incidents.filter((incident) => (
-    !incident.requiredBuilding || stats.buildings[incident.requiredBuilding] > 0
-  ));
+  const availableIncidents = incidents.filter((incident) => isIncidentAvailable(stats, incident));
   const base = pick(availableIncidents);
   const severity = Math.max(1, Math.min(5, Math.round(Math.random() * 4 + (100 - stats.safety) / 35)));
-  return { ...base, id: `${Date.now()}-${Math.random()}`, severity };
+  return {
+    ...base,
+    id: `${Date.now()}-${Math.random()}`,
+    severity,
+    remainingSeconds: INCIDENT_DURATION_SECONDS,
+    tile: base.kind === 'epidemic' ? getEpidemicTile(stats) : undefined,
+  };
+};
+
+const isIncidentAvailable = (stats: CityStats, incident: Omit<Incident, 'id' | 'severity' | 'remainingSeconds'>) => {
+  if (incident.requiredBuilding && stats.buildings[incident.requiredBuilding] <= 0) return false;
+  if (incident.kind === 'epidemic') return stats.buildings.homes > 10 && stats.buildings.malls > 5;
+  return true;
+};
+
+const getEpidemicTile = (stats: CityStats): TilePoint => {
+  const homeTiles = stats.buildingPositions.homes?.filter(Boolean) ?? [];
+  const home = homeTiles.length > 0
+    ? pick(homeTiles)
+    : getConstructionTile('homes', Math.max(0, Math.floor(Math.random() * stats.buildings.homes)));
+  return getOpenTileNear(home);
+};
+
+const getOpenTileNear = (home: TilePoint): TilePoint => {
+  const offsets = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]] as const;
+  const nearby = offsets
+    .map(([dx, dy]) => ({ x: home.x + dx, y: home.y + dy }))
+    .find((tile) => !isRoadCell(tile.x, tile.y) && !isWaterCell(tile.x, tile.y));
+  return nearby ?? home;
+};
+
+const tickIncidentTimer = (stats: CityStats): CityStats => {
+  if (!stats.activeIncident) return stats;
+  const remainingSeconds = (stats.activeIncident.remainingSeconds ?? INCIDENT_DURATION_SECONDS) - 1;
+  if (remainingSeconds > 0) {
+    return { ...stats, activeIncident: { ...stats.activeIncident, remainingSeconds } };
+  }
+  return withAlert(
+    { ...punishUnresolvedIncident(stats), activeIncident: null, incidentResponses: [] },
+    'Происшествие длилось 2 минуты и осталось нерешенным.',
+  );
 };
 
 export const resolveIncident = (stats: CityStats, method: ResponseMethod, cost: number, people = 1): CityStats => {

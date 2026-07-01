@@ -4,7 +4,7 @@ import { tileToPosition } from './cityGrid3d';
 import { getResponseVehicleRoutes } from './cityResponseVehicleRoutes';
 import { getStopProgressBeforeLight, isRedLightForSegment } from './cityTrafficLights3d';
 import { createVehicleMesh, getVehicleClearance, getVehicleSpeed, type VehicleKind } from './cityVehicleConfig3d';
-import { firePatrolRoutes, policeRoutes, roadLaneOffset, trafficPlans, trafficRoutes } from './cityVehicleRoutes';
+import { firePatrolRoutes, policeRoutes, roadLaneOffset, trafficColors, trafficPlans, trafficRoutes } from './cityVehicleRoutes';
 import type { CityStats } from './gameTypes';
 
 export type MovingCar = {
@@ -17,15 +17,25 @@ export type MovingCar = {
   laneOffset: number;
   stopAtEnd: boolean;
   deployedAt?: number;
+  faceTarget?: THREE.Vector3;
   wheels: THREE.Object3D[];
   crew?: FireCrewRig;
 };
 
 export const addCarsToScene = (scene: THREE.Scene, stats: CityStats) => {
   const cars: MovingCar[] = [];
-  const responseRoutes = getResponseVehicleRoutes(stats.activeIncident?.kind, stats.incidentResponses.map((response) => response.method));
+  const responseRoutes = getResponseVehicleRoutes(stats.activeIncident, stats.incidentResponses);
   responseRoutes.forEach((responseRoute, index) => {
-    cars.push(addCar(scene, responseRoute.kind, route(responseRoute.points), index * 2, true));
+    cars.push(addCar(
+      scene,
+      responseRoute.kind,
+      route(responseRoute.points),
+      responseRoute.elapsedSeconds + index * 1.4,
+      true,
+      0x4f79b8,
+      0,
+      tileToPosition(responseRoute.lookAt[0], responseRoute.lookAt[1], 0.45),
+    ));
   });
   const policeOnCall = responseRoutes.filter((item) => item.kind === 'police').length;
   const fireOnCall = responseRoutes.filter((item) => item.kind === 'fire').length;
@@ -36,7 +46,7 @@ export const addCarsToScene = (scene: THREE.Scene, stats: CityStats) => {
   addServiceCars(scene, cars, 'police', stats.buildings.police - policeOnCall, policeRoutes, 0, false);
   if (stats.buildings.fireStations > fireOnCall) cars.push(addCar(scene, 'fire', getFirePatrolRoute(), 4, false));
   addServiceCars(scene, cars, 'fire', Math.max(0, stats.buildings.fireStations - fireOnCall - 1), firePatrolRoutes, 18, false);
-  addTrafficCars(scene, cars);
+  addTrafficCars(scene, cars, stats);
   return cars;
 };
 
@@ -52,11 +62,26 @@ export const updateCars = (cars: MovingCar[], time: number) => {
 
 const getFirePatrolRoute = () => route([[22, 34], [72, 34], [72, 64], [22, 64]]);
 
-const addTrafficCars = (scene: THREE.Scene, cars: MovingCar[]) => {
+const addTrafficCars = (scene: THREE.Scene, cars: MovingCar[], stats: CityStats) => {
   trafficPlans.forEach((plan) => {
     cars.push(addCar(scene, plan.kind, route(trafficRoutes[plan.routeIndex]), plan.offset, false, plan.color, plan.laneOffset));
   });
+  const extraTraffic = stats.buildings.homes + stats.buildings.malls * 3;
+  for (let index = 0; index < extraTraffic; index += 1) {
+    const plan = createExtraTrafficPlan(index);
+    cars.push(addCar(scene, plan.kind, route(trafficRoutes[plan.routeIndex]), plan.offset, false, plan.color, plan.laneOffset));
+  }
 };
+
+const extraTrafficKinds: Array<'civilian' | 'pickup' | 'van' | 'compact'> = ['civilian', 'compact', 'pickup', 'van'];
+
+const createExtraTrafficPlan = (index: number) => ({
+  kind: extraTrafficKinds[index % extraTrafficKinds.length],
+  routeIndex: index % trafficRoutes.length,
+  color: trafficColors[index % trafficColors.length],
+  offset: 130 + index * 7,
+  laneOffset: index % 2 === 0 ? -roadLaneOffset : roadLaneOffset,
+});
 
 const addServiceCars = (
   scene: THREE.Scene,
@@ -83,18 +108,22 @@ const addCar = (
   stopAtEnd: boolean,
   color = 0x4f79b8,
   laneOffset = -roadLaneOffset,
+  faceTarget?: THREE.Vector3,
+  syncToWorldTime = !stopAtEnd,
 ) => {
   const mesh = createVehicleMesh(kind, color);
   const speed = getVehicleSpeed(kind);
+  const worldOffset = syncToWorldTime ? performance.now() / 1000 : 0;
   scene.add(mesh);
   return {
     kind,
     mesh,
     path,
     speed,
-    routeProgress: offset * speed,
+    routeProgress: (offset + worldOffset) * speed,
     laneOffset,
     stopAtEnd,
+    faceTarget,
     wheels: mesh.children.filter((item) => item.name === 'wheel'),
     crew: kind === 'fire' ? mesh.userData.crew : undefined,
   };
@@ -108,7 +137,7 @@ const moveCar = (car: MovingCar, time: number, occupied: THREE.Vector3[]) => {
   const segment = reachedTarget ? car.path.length - 2 : Math.floor(total) % car.path.length;
   const next = reachedTarget ? car.path.length - 1 : (segment + 1) % car.path.length;
   const progress = reachedTarget ? 1 : total % 1;
-  const direction = car.path[next].clone().sub(car.path[segment]);
+  const direction = getCarDirection(car, reachedTarget, segment, next);
   const stopProgress = getStopProgressBeforeLight(car.path[segment], car.path[next]);
   const redLightStop = !reachedTarget && stopProgress !== null && progress > stopProgress && isRedLightForSegment(car.path[segment], car.path[next], time);
   const lane = new THREE.Vector3(-direction.z, 0, direction.x).normalize().multiplyScalar(car.laneOffset);
@@ -125,6 +154,14 @@ const moveCar = (car: MovingCar, time: number, occupied: THREE.Vector3[]) => {
   const deployProgress = car.deployedAt === undefined ? 0 : Math.min(1, (time - car.deployedAt) * 0.7);
   updateFireCrew(car.crew, deployProgress, time);
   return reachedTarget && car.kind === 'fire' && deployProgress >= 1;
+};
+
+const getCarDirection = (car: MovingCar, reachedTarget: boolean, segment: number, next: number) => {
+  if (reachedTarget && car.faceTarget) {
+    const toTarget = car.faceTarget.clone().sub(car.path[next]);
+    if (toTarget.lengthSq() > 0.001) return toTarget;
+  }
+  return car.path[next].clone().sub(car.path[segment]);
 };
 
 const animateWheels = (car: MovingCar, time: number, stopped: boolean) => {

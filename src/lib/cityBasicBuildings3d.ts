@@ -1,11 +1,15 @@
 import * as THREE from 'three';
 import type { MapTile } from './cityMap';
+import { createHospital } from './cityHospital3d';
+import { createMilitaryBase } from './cityMilitaryBase3d';
 import { createFireStation, createPoliceStation } from './cityServiceBuildings3d';
 
 export const createBasicBuilding = (model: MapTile['model']) => {
   if (model === 'shop') return createShop();
   if (model === 'police') return createPoliceStation();
   if (model === 'fire') return createFireStation();
+  if (model === 'hospital') return createHospital();
+  if (model === 'military') return createMilitaryBase();
   const group = new THREE.Group();
   const colors: Partial<Record<MapTile['model'], number>> = {
     home: 0xf2d6b3,
