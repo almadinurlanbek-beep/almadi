@@ -12,14 +12,8 @@ export function AiAdvisorPanel({ stats }: Props) {
 
   const handleAsk = async () => {
     setLoading(true);
-    try {
-      setAdvice(await requestMayorAdvice(stats));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'неизвестная ошибка';
-      setAdvice(`ИИ сейчас не смог ответить: ${message}`);
-    } finally {
-      setLoading(false);
-    }
+    setAdvice(await requestMayorAdvice(stats));
+    setLoading(false);
   };
 
   return (
