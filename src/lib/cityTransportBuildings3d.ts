@@ -9,19 +9,19 @@ const gate = new THREE.MeshLambertMaterial({ color: 0x59656a });
 export const createAirport = () => {
   const group = new THREE.Group();
   const footprint = createBox(cellSize * 7.2, 0.04, cellSize * 6.2, 0x7f8d82, 0, 0.03, 0);
-  const runway = createBox(cellSize * 7, 0.06, 0.62, 0x34393b, 0, 0.08, -cellSize * 2.1);
-  const taxiway = createBox(cellSize * 5.6, 0.05, 0.36, 0x4a5052, -0.1, 0.1, -cellSize * 0.9);
+  const runway = createBox(cellSize * 7, 0.07, 0.88, 0x34393b, 0, 0.08, -cellSize * 2.1);
+  const taxiway = createBox(cellSize * 5.8, 0.06, 0.54, 0x4a5052, -0.1, 0.1, -cellSize * 0.9);
   const terminal = createTerminal();
   const tower = createTower();
   const parking = createParking();
   const fenceGroup = createAirportFence(cellSize * 7.2, cellSize * 6.2);
 
-  terminal.position.set(-cellSize * 1.5, 0, cellSize * 1.15);
-  tower.position.set(cellSize * 1.6, 0, cellSize * 1.05);
-  parking.position.set(cellSize * 1.8, 0.08, cellSize * 2);
+  terminal.position.set(-cellSize * 1.2, 0, cellSize * 1.05);
+  tower.position.set(cellSize * 1.9, 0, cellSize * 0.95);
+  parking.position.set(cellSize * 1.85, 0.08, cellSize * 2.05);
   group.add(footprint, runway, taxiway, fenceGroup, terminal, tower, parking);
-  group.add(createPlane(-cellSize * 1.7, -cellSize * 2.1, 0), createPlane(cellSize * 1.3, -cellSize * 2.1, Math.PI));
-  group.add(createPlane(-cellSize * 0.2, -cellSize * 0.9, Math.PI / 2));
+  group.add(createPlane(-cellSize * 1.95, -cellSize * 2.1, 0), createPlane(cellSize * 1.55, -cellSize * 2.1, Math.PI));
+  group.add(createPlane(-cellSize * 0.15, -cellSize * 0.9, Math.PI / 2));
   addRunwayLines(group);
   group.scale.set(1, 1, 1);
   return group;
@@ -92,31 +92,35 @@ const createTrain = () => {
 
 const createTerminal = () => {
   const group = new THREE.Group();
-  const body = createBox(3.8, 0.85, 1.25, 0xd9e3e7, 0, 0.48, 0);
-  const windows = createBox(3.55, 0.28, 0.05, 0x79bad0, 0, 0.68, -0.65);
-  const bridgeA = createBox(0.26, 0.18, 1.15, 0xb8c5c9, -1.15, 0.42, -1.05);
-  const bridgeB = createBox(0.26, 0.18, 1.15, 0xb8c5c9, 1.15, 0.42, -1.05);
-  group.add(body, windows, bridgeA, bridgeB);
+  const body = createBox(5.25, 1.28, 1.72, 0xd9e3e7, 0, 0.66, 0);
+  const upper = createBox(3.85, 0.72, 1.22, 0xcbd8dc, -0.2, 1.56, 0.04);
+  const windows = createBox(4.92, 0.42, 0.06, 0x79bad0, 0, 0.92, -0.89);
+  const upperWindows = createBox(3.48, 0.28, 0.06, 0x79bad0, -0.2, 1.62, -0.6);
+  const roof = createBox(5.55, 0.18, 1.96, 0x66727a, 0, 1.38, 0);
+  const bridgeA = createBox(0.38, 0.25, 1.7, 0xb8c5c9, -1.62, 0.58, -1.45);
+  const bridgeB = createBox(0.38, 0.25, 1.7, 0xb8c5c9, 1.62, 0.58, -1.45);
+  group.add(body, upper, windows, upperWindows, roof, bridgeA, bridgeB);
   return group;
 };
 
 const createTower = () => {
   const group = new THREE.Group();
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.26, 2.1, 12), concrete);
-  const cabin = createBox(0.72, 0.38, 0.72, 0x9fc7d0, 0, 2.18, 0);
-  shaft.position.y = 1.15;
-  group.add(shaft, cabin);
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.36, 3.1, 12), concrete);
+  const cabin = createBox(1.12, 0.62, 1.12, 0x9fc7d0, 0, 3.24, 0);
+  const roof = createBox(1.28, 0.16, 1.28, 0x59656a, 0, 3.64, 0);
+  shaft.position.y = 1.62;
+  group.add(shaft, cabin, roof);
   return group;
 };
 
 const createParking = () => {
   const group = new THREE.Group();
-  group.add(createBox(2.6, 0.035, 1.25, 0x4b5254, 0, 0, 0));
+  group.add(createBox(3.55, 0.04, 1.74, 0x4b5254, 0, 0, 0));
   for (let index = 0; index < 8; index += 1) {
-    const x = (index % 4) * 0.52 - 0.78;
-    const z = Math.floor(index / 4) * 0.46 - 0.23;
-    group.add(createBox(0.32, 0.12, 0.18, index % 2 ? 0xb84f4f : 0x4f79b8, x, 0.12, z));
-    group.add(createBox(0.04, 0.02, 1.05, 0xffffff, x + 0.24, 0.04, 0));
+    const x = (index % 4) * 0.72 - 1.08;
+    const z = Math.floor(index / 4) * 0.62 - 0.31;
+    group.add(createBox(0.44, 0.16, 0.25, index % 2 ? 0xb84f4f : 0x4f79b8, x, 0.14, z));
+    group.add(createBox(0.05, 0.025, 1.45, 0xffffff, x + 0.34, 0.045, 0));
   }
   return group;
 };
@@ -131,12 +135,14 @@ const addRunwayLines = (group: THREE.Group) => {
 
 const createPlane = (x: number, z: number, rotation: number) => {
   const plane = new THREE.Group();
-  const body = createBox(1.45, 0.16, 0.16, 0xf4f7f8, 0, 0.3, 0);
-  const wing = createBox(0.44, 0.04, 1.22, 0xd8e1e4, 0, 0.32, 0);
-  const tail = createBox(0.18, 0.34, 0.06, 0xd64242, 0.64, 0.44, 0);
+  const body = createBox(2.25, 0.24, 0.24, 0xf4f7f8, 0, 0.36, 0);
+  const nose = createBox(0.28, 0.2, 0.2, 0xe7eef0, -1.24, 0.36, 0);
+  const wing = createBox(0.68, 0.06, 1.88, 0xd8e1e4, -0.08, 0.38, 0);
+  const tailWing = createBox(0.28, 0.05, 0.9, 0xd8e1e4, 0.94, 0.45, 0);
+  const tail = createBox(0.24, 0.54, 0.08, 0xd64242, 1.02, 0.62, 0);
   plane.position.set(x, 0, z);
   plane.rotation.y = rotation;
-  plane.add(body, wing, tail);
+  plane.add(body, nose, wing, tailWing, tail);
   return plane;
 };
 
