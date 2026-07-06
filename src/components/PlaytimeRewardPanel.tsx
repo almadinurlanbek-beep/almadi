@@ -1,5 +1,6 @@
 import { getPlaytimeRewardStatuses, type PlaytimeRewardId, type PlaytimeRewardState } from '../lib/playtimeRewards';
 import { formatMoney } from '../lib/format';
+import { useLanguage } from '../lib/i18n';
 
 type Props = {
   reward: PlaytimeRewardState;
@@ -7,14 +8,15 @@ type Props = {
 };
 
 export function PlaytimeRewardPanel({ reward, onClaim }: Props) {
+  const { t } = useLanguage();
   const statuses = getPlaytimeRewardStatuses(reward);
 
   return (
     <section className="panel playtime-reward">
       <div className="reward-heading">
         <div>
-          <p className="eyebrow">Бесплатные награды</p>
-          <h3>За время в игре</h3>
+          <p className="eyebrow">{t('freeRewards')}</p>
+          <h3>{t('playtime')}</h3>
         </div>
         <strong>{formatDuration(reward.secondsPlayed)}</strong>
       </div>
@@ -28,7 +30,7 @@ export function PlaytimeRewardPanel({ reward, onClaim }: Props) {
             onClick={() => onClaim(status.id)}
           >
             <span>{status.label}</span>
-            <small>{getButtonText(status.claimed, status.remainingSeconds, status.amount)}</small>
+            <small>{getButtonText(status.claimed, status.remainingSeconds, status.amount, t)}</small>
           </button>
         ))}
       </div>
@@ -36,10 +38,10 @@ export function PlaytimeRewardPanel({ reward, onClaim }: Props) {
   );
 }
 
-const getButtonText = (claimed: boolean, remainingSeconds: number, amount: number) => {
-  if (claimed) return 'Забрано';
-  if (remainingSeconds > 0) return `через ${formatDuration(remainingSeconds)}`;
-  return `Забрать ${formatMoney(amount)}`;
+const getButtonText = (claimed: boolean, remainingSeconds: number, amount: number, t: ReturnType<typeof useLanguage>['t']) => {
+  if (claimed) return t('claimed');
+  if (remainingSeconds > 0) return `${t('after')} ${formatDuration(remainingSeconds)}`;
+  return `${t('claim')} ${formatMoney(amount)}`;
 };
 
 const formatDuration = (totalSeconds: number) => {

@@ -27,6 +27,7 @@ import { completeAiQuest, generateAiQuest, getAiQuestProgress, type AiQuest } fr
 import { claimHourlyQuestReward, ensureHourlyQuests, getHourlyQuestStatuses } from './lib/hourlyQuests';
 import { createQuestMapMarkers } from './lib/questMapMarkers';
 import { claimQuestReward, getQuestStatuses } from './lib/quests';
+import { useLanguage } from './lib/i18n';
 import type { BuildingId, CityStats, ResponseMethod, TilePoint } from './lib/gameTypes';
 import type { Session } from '@supabase/supabase-js';
 
@@ -46,6 +47,7 @@ const getFriendRequestMessage = (result: FriendRequestResult) => {
 };
 
 export default function App() {
+  const { t } = useLanguage();
   const [savedGame] = useState(loadSavedCities);
   const [countryId, setCountryId] = useState(savedGame.countryId);
   const [cities, setCities] = useState<Record<string, CityStats>>(savedGame.cities);
@@ -415,11 +417,11 @@ export default function App() {
             <div className="friends-modal">
               <div className="friends-modal-head">
                 <div>
-                  <p className="eyebrow">Друзья</p>
-                  <h2>Добавить друга</h2>
+                  <p className="eyebrow">{t('friends')}</p>
+                  <h2>{t('addFriend')}</h2>
                 </div>
                 <button type="button" className="secondary" onClick={() => setIsFriendsOpen(false)}>
-                  Закрыть
+                  {t('close')}
                 </button>
               </div>
               <FriendsPanel
@@ -438,11 +440,11 @@ export default function App() {
             {friendView && (
               <section className="panel friend-view">
                 <div>
-                  <p className="eyebrow">Просмотр друга</p>
+                  <p className="eyebrow">{t('viewCity')}</p>
                   <strong>{friendView.friend.displayName ?? friendView.friend.email}</strong>
                 </div>
                 <button type="button" className="secondary" onClick={() => setFriendView(null)}>
-                  Мой город
+                  {t('myCity')}
                 </button>
               </section>
             )}

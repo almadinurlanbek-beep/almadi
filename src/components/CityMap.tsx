@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createCityTiles } from '../lib/cityMap';
 import { buildings } from '../lib/gameData';
 import { formatMoney } from '../lib/format';
+import { getBuildingText, useLanguage } from '../lib/i18n';
 import type { BuildingId, CityStats, TilePoint } from '../lib/gameTypes';
 import type { QuestMapMarker } from '../lib/questMapMarkers';
 import { CityMap3D } from './CityMap3D';
@@ -26,6 +27,7 @@ type SelectedBuilding = {
 const hitboxRadius = 5;
 
 export function CityMap({ readOnly = false, questMarkers, stats, onDeleteBuilding, onQuestMarkerClick, onMoveBuilding, onRotateBuilding }: Props) {
+  const { language, t } = useLanguage();
   const [selected, setSelected] = useState<SelectedBuilding | null>(null);
   const [moving, setMoving] = useState(false);
   const mapKey = useMemo(
@@ -34,6 +36,7 @@ export function CityMap({ readOnly = false, questMarkers, stats, onDeleteBuildin
   );
   const tiles = useMemo(() => createCityTiles(stats), [mapKey]);
   const selectedInfo = selected ? buildings.find((building) => building.id === selected.buildingId) : null;
+  const selectedText = selected ? getBuildingText(selected.buildingId, language) : null;
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -78,8 +81,8 @@ export function CityMap({ readOnly = false, questMarkers, stats, onDeleteBuildin
   return (
     <section className="panel map-panel">
       <div className="map-title">
-        <p className="eyebrow">3D карта города</p>
-        {!readOnly && questMarkers.length > 0 && <small>Квесты отмечены на карте значками. Нажми на маркер, чтобы открыть задание.</small>}
+        <p className="eyebrow">{t('mapTitle')}</p>
+        {!readOnly && questMarkers.length > 0 && <small>{t('mapHint')}</small>}
       </div>
       <div className="map-stage">
         <CityMap3D
@@ -110,18 +113,18 @@ export function CityMap({ readOnly = false, questMarkers, stats, onDeleteBuildin
       </div>
       {selected && selectedInfo && (
         <div className="building-actions">
-          <strong>{selectedInfo.name}</strong>
+          <strong>{selectedText?.name ?? selectedInfo.name}</strong>
           {!readOnly && (
             <>
               <button type="button" className="secondary" onClick={() => setMoving(true)}>
-                Переместить
+                {t('move')}
               </button>
               <button type="button" className="danger" onClick={handleDelete}>
-                Удалить +{formatMoney(Math.round(selectedInfo.cost * 0.5))}
+                {t('delete')} +{formatMoney(Math.round(selectedInfo.cost * 0.5))}
               </button>
             </>
           )}
-          <small>{readOnly ? 'Это город друга: его можно смотреть, но нельзя менять.' : moving ? 'Зажми выбранное здание, перетащи на свободную клетку и отпусти мышку.' : 'Нажми R, чтобы повернуть выбранное здание.'}</small>
+          <small>{readOnly ? t('friendCityReadonly') : moving ? t('moveHint') : t('rotateHint')}</small>
         </div>
       )}
     </section>

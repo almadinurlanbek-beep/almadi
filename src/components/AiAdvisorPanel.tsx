@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { generateAiQuest, getAiQuestProgress, type AiQuest } from '../lib/aiQuests';
 import type { CityStats } from '../lib/gameTypes';
+import { useLanguage } from '../lib/i18n';
 
 type Props = {
   stats: CityStats;
@@ -9,12 +10,13 @@ type Props = {
 };
 
 export function AiAdvisorPanel({ stats, activeQuest, onQuestReady }: Props) {
-  const [advice, setAdvice] = useState('Нажми кнопку, и советник даст задание с прогрессом.');
+  const { t } = useLanguage();
+  const [advice, setAdvice] = useState(t('advisorStart'));
   const [loading, setLoading] = useState(false);
   const activeProgress = activeQuest ? getAiQuestProgress(activeQuest, stats) : 0;
   const isActiveQuestDone = activeQuest ? activeProgress >= activeQuest.target : false;
   const buttonDisabled = loading || Boolean(activeQuest);
-  const shownAdvice = activeQuest ? getQuestAdvice(activeQuest, stats) : advice;
+  const shownAdvice = activeQuest ? getQuestAdvice(activeQuest, stats, t) : advice;
 
   const handleAsk = async () => {
     if (activeQuest) return;
@@ -23,9 +25,9 @@ export function AiAdvisorPanel({ stats, activeQuest, onQuestReady }: Props) {
     try {
       const quest = await generateAiQuest(stats);
       onQuestReady(quest);
-      setAdvice(getQuestAdvice(quest, stats));
+      setAdvice(getQuestAdvice(quest, stats, t));
     } catch {
-      setAdvice('Советник сейчас не смог создать задание. Попробуй ещё раз через пару секунд.');
+      setAdvice(t('advisorError'));
     } finally {
       setLoading(false);
     }
@@ -35,11 +37,11 @@ export function AiAdvisorPanel({ stats, activeQuest, onQuestReady }: Props) {
     <section className="panel ai-advisor">
       <div className="advisor-heading">
         <div>
-          <p className="eyebrow">ИИ-советник</p>
-          <h3>Совет мэра</h3>
+          <p className="eyebrow">{t('advisorEyebrow')}</p>
+          <h3>{t('mayorAdvice')}</h3>
         </div>
         <button type="button" className="secondary" disabled={buttonDisabled} onClick={handleAsk}>
-          {getButtonText(loading, activeQuest, isActiveQuestDone)}
+          {getButtonText(loading, activeQuest, isActiveQuestDone, t)}
         </button>
       </div>
       <p>{shownAdvice}</p>
@@ -47,16 +49,16 @@ export function AiAdvisorPanel({ stats, activeQuest, onQuestReady }: Props) {
   );
 }
 
-const getButtonText = (loading: boolean, activeQuest: AiQuest | null, isActiveQuestDone: boolean) => {
-  if (loading) return 'Думает...';
-  if (!activeQuest) return 'Спросить';
-  return isActiveQuestDone ? 'Забери награду' : 'Выполни задание';
+const getButtonText = (loading: boolean, activeQuest: AiQuest | null, isActiveQuestDone: boolean, t: ReturnType<typeof useLanguage>['t']) => {
+  if (loading) return t('thinking');
+  if (!activeQuest) return t('ask');
+  return isActiveQuestDone ? t('claimReward') : t('completeTask');
 };
 
-const getQuestAdvice = (quest: AiQuest, stats: CityStats) => {
+const getQuestAdvice = (quest: AiQuest, stats: CityStats, t: ReturnType<typeof useLanguage>['t']) => {
   const progress = getAiQuestProgress(quest, stats);
   if (progress >= quest.target) {
-    return `Готово: ${quest.description}. У тебя уже ${progress}/${quest.target}. Забери награду в квестах, потом можно спросить новый совет.`;
+    return `${t('claimReward')}: ${quest.description}. ${progress}/${quest.target}.`;
   }
-  return `Нельзя получить новый совет, пока это задание не выполнено: ${quest.description}. Сейчас ${progress}/${quest.target}.`;
+  return `${t('completeTask')}: ${quest.description}. ${progress}/${quest.target}.`;
 };

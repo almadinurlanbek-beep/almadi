@@ -74,6 +74,29 @@ button:disabled { cursor: default; opacity: 0.45; }
   justify-content: space-between;
 }
 
+.top-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.language-select {
+  align-items: center;
+  color: var(--muted);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 8px;
+}
+
+.language-select select {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-weight: 800;
+  padding: 8px 10px;
+}
+
 .friend-top-button {
   align-items: center;
   display: inline-flex;
@@ -391,6 +414,7 @@ select {
   .metrics, .income-list, .right { grid-template-columns: 1fr; }
   .build-card { grid-template-columns: 1fr; }
   .top-heading { align-items: stretch; flex-direction: column; }
+  .top-actions { width: 100%; }
   .friend-top-button { justify-content: center; width: 100%; }
   .tax, .actions { align-items: stretch; flex-direction: column; }
   h1 { font-size: 28px; }

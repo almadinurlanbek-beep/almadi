@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { FriendItem } from '../lib/friends';
+import { useLanguage } from '../lib/i18n';
 
 type Props = {
   friends: FriendItem[];
@@ -11,6 +12,7 @@ type Props = {
 };
 
 export function FriendsPanel({ friends, loading, message, onAccept, onAdd, onViewCity }: Props) {
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
 
   const handleAdd = () => {
@@ -23,8 +25,8 @@ export function FriendsPanel({ friends, loading, message, onAccept, onAdd, onVie
     <section className="panel friends-panel">
       <div className="friends-heading">
         <div>
-          <p className="eyebrow">Друзья</p>
-          <h3>Города друзей</h3>
+          <p className="eyebrow">{t('friends')}</p>
+          <h3>{t('friendCities')}</h3>
         </div>
         <strong>{friends.filter((friend) => friend.status === 'accepted').length}</strong>
       </div>
@@ -35,27 +37,27 @@ export function FriendsPanel({ friends, loading, message, onAccept, onAdd, onVie
           handleAdd();
         }}
       >
-        <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="email друга" type="email" />
+        <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder={t('friendEmail')} type="email" />
         <button type="submit" className="dark friend-add-button" disabled={loading || !email.trim()}>
-          {loading ? 'Добавляем...' : 'Добавить друга'}
+          {loading ? t('adding') : t('addFriend')}
         </button>
       </form>
       {message && <small className="friend-message">{message}</small>}
       <div className="friend-list">
-        {friends.length === 0 && <small>Добавь друга по email, чтобы смотреть его город.</small>}
+        {friends.length === 0 && <small>{t('noFriends')}</small>}
         {friends.map((friend) => (
           <article className="friend-item" key={friend.friendshipId}>
             <div>
               <strong>{friend.displayName ?? friend.email}</strong>
-              <small>{getStatusText(friend)}</small>
+              <small>{getStatusText(friend, t)}</small>
             </div>
             {friend.status === 'accepted' ? (
               <button type="button" className="dark friend-view-button" disabled={loading} onClick={() => onViewCity(friend)}>
-                Смотреть город
+                {t('viewCity')}
               </button>
             ) : friend.incoming ? (
               <button type="button" className="dark" disabled={loading} onClick={() => onAccept(friend.friendshipId)}>
-                Принять
+                {t('accept')}
               </button>
             ) : null}
           </article>
@@ -65,7 +67,7 @@ export function FriendsPanel({ friends, loading, message, onAccept, onAdd, onVie
   );
 }
 
-const getStatusText = (friend: FriendItem) => {
+const getStatusText = (friend: FriendItem, t: ReturnType<typeof useLanguage>['t']) => {
   if (friend.status === 'accepted') return friend.email;
-  return friend.incoming ? 'хочет добавить тебя' : 'заявка отправлена';
+  return friend.incoming ? t('wantsAdd') : t('requestSent');
 };

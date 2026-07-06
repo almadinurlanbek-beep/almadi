@@ -3,6 +3,7 @@ import { formatMoney } from '../lib/format';
 import { getHourlyQuestStatuses, getNextHourlyQuestText, type HourlyQuestStatus } from '../lib/hourlyQuests';
 import { getQuestStatuses, type QuestStatus } from '../lib/quests';
 import type { CityStats } from '../lib/gameTypes';
+import { useLanguage } from '../lib/i18n';
 
 type Props = {
   aiQuest: AiQuest | null;
@@ -27,6 +28,7 @@ type QuestCard = {
 };
 
 export function QuestPanel({ aiQuest, aiQuestLoading, selectedQuestId, stats, onClaimAiQuest, onClaimHourlyQuest, onClaim, onGenerateAiQuest }: Props) {
+  const { t } = useLanguage();
   const mayorQuests = getQuestStatuses(stats).filter((quest) => !quest.claimed);
   const hourlyQuests = getHourlyQuestStatuses(stats);
   const nextHourlyText = getNextHourlyQuestText(stats);
@@ -36,11 +38,11 @@ export function QuestPanel({ aiQuest, aiQuestLoading, selectedQuestId, stats, on
     <section className="panel quest-panel">
       <div className="quest-heading">
         <div>
-          <p className="eyebrow">Квесты</p>
-          <h3>Задания на карте</h3>
+          <p className="eyebrow">{t('quests')}</p>
+          <h3>{t('mapTasks')}</h3>
         </div>
         <button type="button" className="secondary" disabled={aiQuestLoading || Boolean(aiQuest)} onClick={onGenerateAiQuest}>
-          {aiQuestLoading ? 'ИИ думает...' : aiQuest ? 'ИИ-квест есть' : 'ИИ-задание'}
+          {aiQuestLoading ? t('aiThinking') : aiQuest ? t('aiQuestExists') : t('aiTask')}
         </button>
       </div>
       {selected ? (
@@ -52,11 +54,12 @@ export function QuestPanel({ aiQuest, aiQuestLoading, selectedQuestId, stats, on
             if (selected.kind === 'hourly') onClaimHourlyQuest(selected.quest.id);
             if (selected.kind === 'mayor') onClaim(selected.quest.id);
           }}
+          t={t}
         />
       ) : (
         <div className="quest-map-hint">
-          <strong>Нажми на ? на карте</strong>
-          <small>Там откроется квест, его прогресс и награда.</small>
+          <strong>{t('tapQuest')}</strong>
+          <small>{t('questHint')}</small>
           {nextHourlyText && <small>Новые ежечасные квесты через {nextHourlyText}</small>}
         </div>
       )}
@@ -64,11 +67,11 @@ export function QuestPanel({ aiQuest, aiQuestLoading, selectedQuestId, stats, on
   );
 }
 
-function QuestCardView({ quest, kind, onClaim }: { quest: QuestCard; kind: 'ai' | 'hourly' | 'mayor'; onClaim: () => void }) {
+function QuestCardView({ quest, kind, onClaim, t }: { quest: QuestCard; kind: 'ai' | 'hourly' | 'mayor'; onClaim: () => void; t: ReturnType<typeof useLanguage>['t'] }) {
   return (
     <article className={`quest-item ${quest.completed ? 'ready' : ''} ${kind === 'ai' ? 'ai-quest' : ''} ${kind === 'hourly' ? 'hourly-quest' : ''}`}>
       <div>
-        <small>{kind === 'ai' ? 'ИИ-квест' : kind === 'hourly' ? 'Ежечасный квест' : 'Квест мэра'}</small>
+        <small>{kind === 'ai' ? t('aiTask') : kind === 'hourly' ? t('quests') : t('mayorAdvice')}</small>
         <strong>{quest.title}</strong>
         <small>{quest.description}</small>
         <div className="quest-progress">
@@ -80,7 +83,7 @@ function QuestCardView({ quest, kind, onClaim }: { quest: QuestCard; kind: 'ai' 
         </small>
       </div>
       <button type="button" className={quest.completed ? 'dark' : 'secondary'} disabled={!quest.completed} onClick={onClaim}>
-        Забрать
+        {t('claim')}
       </button>
     </article>
   );
