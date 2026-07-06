@@ -24,7 +24,7 @@ export const createPoliceStation = () => {
   group.add(createShield(-1.25, 1.38, -1.16));
   group.add(createFlagPole(1.78, -0.94));
   group.add(createPoliceCar(-0.2, -1.75));
-  group.scale.set(2.25, 1.55, 2.25);
+  group.scale.set(1.28, 1.35, 1.28);
   return group;
 };
 
@@ -40,7 +40,7 @@ export const createFireStation = () => {
   group.add(part(0.52, 0.42, 0.08, glass, -0.52, 1.0, -1.13));
   group.add(createSign('FIRE', 0xc9362d, 1.86, -1.2));
   group.add(createFireTruck(-0.08, -1.82));
-  group.scale.set(2.25, 1.55, 2.25);
+  group.scale.set(1.28, 1.35, 1.28);
   return group;
 };
 

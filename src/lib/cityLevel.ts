@@ -14,6 +14,11 @@ const xpByBuilding: Record<BuildingId, number> = {
   malls: 280,
   airports: 420,
   militaryBases: 260,
+  stadiums: 500,
+  universities: 460,
+  banks: 360,
+  ports: 520,
+  museums: 430,
 };
 
 export const getXpForBuilding = (buildingId: BuildingId) => xpByBuilding[buildingId];

@@ -10,7 +10,25 @@ export type BuildingId =
   | 'malls'
   | 'airports'
   | 'stations'
-  | 'militaryBases';
+  | 'militaryBases'
+  | 'stadiums'
+  | 'universities'
+  | 'banks'
+  | 'ports'
+  | 'museums';
+
+export type BuildingSkinId = 'classic' | 'modern' | 'gold';
+
+export type HourlyQuestObjective = 'population' | 'happiness' | 'health' | 'safety' | 'trust' | 'homes' | 'schools' | 'parks' | 'shops';
+
+export type HourlyQuest = {
+  id: string;
+  title: string;
+  description: string;
+  objective: HourlyQuestObjective;
+  target: number;
+  reward: number;
+};
 
 export type CityStats = {
   day: number;
@@ -22,16 +40,21 @@ export type CityStats = {
   level: number;
   xp: number;
   taxRate: number;
+  residentPayoutSeconds: number;
   happiness: number;
   health: number;
   safety: number;
   trust: number;
   buildings: Record<BuildingId, number>;
+  buildingSkins: Record<BuildingId, BuildingSkinId>;
   buildingPositions: Partial<Record<BuildingId, TilePoint[]>>;
   construction: ConstructionJob[];
   news: string[];
   activeIncident: Incident | null;
   incidentResponses: IncidentResponse[];
+  claimedQuestIds: string[];
+  hourlyQuests: HourlyQuest[];
+  nextHourlyQuestAt: number | null;
 };
 
 export type TilePoint = {

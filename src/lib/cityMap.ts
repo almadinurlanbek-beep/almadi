@@ -25,7 +25,12 @@ export type TileKey =
   | 'factory'
   | 'airport'
   | 'station'
-  | 'military';
+  | 'military'
+  | 'stadium'
+  | 'university'
+  | 'bank'
+  | 'port'
+  | 'museum';
 export type TileVariant = 'lot' | 'road' | 'home' | 'service' | 'nature' | 'work' | 'water';
 export type MapTile = {
   id: string;

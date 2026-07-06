@@ -17,6 +17,11 @@ export const labels: Record<TileKey, string> = {
   airport: 'Аэропорт',
   station: 'Вокзал',
   military: 'Военная база',
+  stadium: 'Стадион',
+  university: 'Университет',
+  bank: 'Банк',
+  port: 'Порт',
+  museum: 'Музей',
 };
 
 export const variants: Record<TileKey, TileVariant> = {
@@ -35,6 +40,11 @@ export const variants: Record<TileKey, TileVariant> = {
   airport: 'work',
   station: 'work',
   military: 'service',
+  stadium: 'work',
+  university: 'service',
+  bank: 'work',
+  port: 'work',
+  museum: 'service',
 };
 
 export const buildingMap: Record<Exclude<TileKey, 'lot' | 'road' | 'water'>, BuildingId> = {
@@ -50,6 +60,11 @@ export const buildingMap: Record<Exclude<TileKey, 'lot' | 'road' | 'water'>, Bui
   airport: 'airports',
   station: 'stations',
   military: 'militaryBases',
+  stadium: 'stadiums',
+  university: 'universities',
+  bank: 'banks',
+  port: 'ports',
+  museum: 'museums',
 };
 
 export const modelByBuilding: Record<BuildingId, TileKey> = {
@@ -65,4 +80,9 @@ export const modelByBuilding: Record<BuildingId, TileKey> = {
   airports: 'airport',
   stations: 'station',
   militaryBases: 'military',
+  stadiums: 'stadium',
+  universities: 'university',
+  banks: 'bank',
+  ports: 'port',
+  museums: 'museum',
 };

@@ -66,7 +66,7 @@ const addTrafficCars = (scene: THREE.Scene, cars: MovingCar[], stats: CityStats)
   trafficPlans.forEach((plan) => {
     cars.push(addCar(scene, plan.kind, route(trafficRoutes[plan.routeIndex]), plan.offset, false, plan.color, plan.laneOffset));
   });
-  const extraTraffic = stats.buildings.homes + stats.buildings.malls * 3;
+  const extraTraffic = Math.min(28, stats.buildings.homes + stats.buildings.malls * 3);
   for (let index = 0; index < extraTraffic; index += 1) {
     const plan = createExtraTrafficPlan(index);
     cars.push(addCar(scene, plan.kind, route(trafficRoutes[plan.routeIndex]), plan.offset, false, plan.color, plan.laneOffset));

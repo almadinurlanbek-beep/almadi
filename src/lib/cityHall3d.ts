@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { tileToPosition } from './cityGrid3d';
 
+const cityHallScale = 1.35;
+
 export const addCityHall = (scene: THREE.Scene) => {
   const hall = new THREE.Group();
   const base = new THREE.Mesh(
@@ -24,6 +26,7 @@ export const addCityHall = (scene: THREE.Scene) => {
   dome.position.y = 5.05;
   stairs.position.set(0, 0.18, -1.95);
   hall.add(createGrounds(), base, tower, dome, stairs, createColumns(), createFlag(), createFence(), createOfficialCars());
+  hall.scale.setScalar(cityHallScale);
   hall.position.copy(tileToPosition(49, 39, 0.08));
   scene.add(hall);
 };

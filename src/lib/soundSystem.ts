@@ -1,4 +1,4 @@
-type SoundName = 'start' | 'build' | 'click' | 'incident';
+type SoundName = 'start' | 'build' | 'click' | 'incident' | 'notify' | 'success' | 'warning';
 
 let audioContext: AudioContext | null = null;
 let ambientOscillator: OscillatorNode | null = null;
@@ -18,6 +18,9 @@ export const playSound = (name: SoundName) => {
   if (name === 'build') playTone(context, [440, 660], now, 0.08, 0.12);
   if (name === 'click') playTone(context, [330], now, 0.05, 0.08);
   if (name === 'incident') playTone(context, [220, 196, 220], now, 0.12, 0.18);
+  if (name === 'notify') playTone(context, [523, 659], now, 0.06, 0.1);
+  if (name === 'success') playTone(context, [523, 659, 784], now, 0.07, 0.1);
+  if (name === 'warning') playTone(context, [294, 247], now, 0.1, 0.14);
 };
 
 const getAudioContext = () => {

@@ -8,6 +8,7 @@ export type TrafficLightRig = {
   group: THREE.Group;
   red: THREE.Mesh;
   green: THREE.Mesh;
+  greenOn?: boolean;
 };
 
 export const addTrafficLights = (scene: THREE.Scene, tiles: MapTile[]) => {
@@ -41,6 +42,8 @@ export const updateTrafficLights = (lights: TrafficLightRig[], time: number) => 
   const horizontalGreen = Math.floor(time / PHASE_SECONDS) % 2 === 0;
   lights.forEach((light, index) => {
     const greenOn = index % 2 === 0 ? horizontalGreen : !horizontalGreen;
+    if (light.greenOn === greenOn) return;
+    light.greenOn = greenOn;
     setLightColor(light.green, greenOn ? 0x32d96b : 0x17452a);
     setLightColor(light.red, greenOn ? 0x4f1714 : 0xff3b30);
   });

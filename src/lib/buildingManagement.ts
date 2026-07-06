@@ -1,5 +1,5 @@
 import { buildings } from './gameData';
-import { getOccupiedBuildingCells, getSafeBuildingPoint } from './cityBuildingPlacement';
+import { alignBuildingPoint, canPlaceBuildingPoint, getOccupiedBuildingCells } from './cityBuildingPlacement';
 import { getConstructionTile } from './cityMap';
 import type { BuildingId, CityStats, TilePoint } from './gameTypes';
 
@@ -22,7 +22,8 @@ export const moveBuilding = (stats: CityStats, buildingId: BuildingId, index: nu
   if (stats.buildings[buildingId] <= index) return stats;
   const positions = [...(stats.buildingPositions[buildingId] ?? [])];
   const occupied = getOccupiedBuildingCells(stats.buildingPositions, { buildingId, index });
-  positions[index] = getSafeBuildingPoint(buildingId, index, { ...point, rotation: positions[index]?.rotation }, occupied);
+  if (!canPlaceBuildingPoint(buildingId, point, occupied)) return stats;
+  positions[index] = alignBuildingPoint(buildingId, { ...point, rotation: positions[index]?.rotation });
   return {
     ...stats,
     buildingPositions: {

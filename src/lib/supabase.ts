@@ -11,4 +11,9 @@ if (!url || !anonKey) {
   );
 }
 
-export const supabase = createClient(url, anonKey);
+const normalizeSupabaseUrl = (value: string) => {
+  const origin = value.match(/^https:\/\/[^/]+\.supabase\.co/)?.[0];
+  return origin ?? value.replace(/\/+$/, '');
+};
+
+export const supabase = createClient(normalizeSupabaseUrl(url), anonKey);

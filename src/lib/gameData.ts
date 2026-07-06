@@ -1,19 +1,23 @@
 import type { Building, BuildingId, CityStats, Incident } from './gameTypes';
 import { getCountry } from './countries';
+import { defaultBuildingSkins } from './buildingSkins';
+
+export const startingMoney = 500000;
+export const firstPayoutGraceSeconds = 600;
 
 export const buildings: Building[] = [
-  { id: 'shops', name: 'Магазин', icon: '🏪', cost: 10000, buildSeconds: 180, description: 'Стоит $10000, строится 3 мин.' },
-  { id: 'homes', name: 'Дома', icon: '🏠', cost: 3000, buildSeconds: 20, description: '+60 жителей, строится 20 сек.' },
-  { id: 'schools', name: 'Школа', icon: '🏫', cost: 20000, buildSeconds: 120, description: '+доверие и счастье, строится 2 мин.' },
-  { id: 'hospitals', name: 'Больница', icon: '🏥', cost: 20000, buildSeconds: 180, description: '+здоровье, строится 3 мин.' },
-  { id: 'police', name: 'Полиция', icon: '🚓', cost: 15000, buildSeconds: 180, description: '+безопасность, строится 3 мин.' },
-  { id: 'fireStations', name: 'Пожарная', icon: '🚒', cost: 9000, buildSeconds: 180, description: 'Слабее пожары, строится 3 мин.' },
-  { id: 'parks', name: 'Парк', icon: '🌳', cost: 20000, buildSeconds: 0, description: '+счастье, экология' },
-  { id: 'factories', name: 'Завод', icon: '🏭', cost: 50000, buildSeconds: 0, description: '+$300 в минуту, -здоровье' },
-  { id: 'malls', name: 'ТЦ', icon: '🛍️', cost: 100000, buildSeconds: 240, description: '+$900 в минуту, строится 4 мин.' },
-  { id: 'airports', name: 'Аэропорт', icon: '✈️', cost: 150000, buildSeconds: 300, description: '+$10000 за 5 мин. и доверие, строится 5 мин.' },
-  { id: 'stations', name: 'Вокзал', icon: '🚉', cost: 70000, buildSeconds: 180, description: '+доход и жители, строится 3 мин.' },
-  { id: 'militaryBases', name: 'Военная база', icon: '🪖', cost: 500000, buildSeconds: 240, description: '+безопасность и доверие, строится 4 мин.' },
+  { id: 'shops', name: 'Магазин', icon: '🏪', cost: 10000, buildSeconds: 45, description: '+$120 в мин., строится 45 сек.' },
+  { id: 'homes', name: 'Дома', icon: '🏠', cost: 3000, buildSeconds: 5, description: '+60 жителей, +$35 в мин., строится 5 сек.' },
+  { id: 'schools', name: 'Школа', icon: '🏫', cost: 20000, buildSeconds: 30, description: '+$55 в мин., доверие и счастье, строится 30 сек.' },
+  { id: 'hospitals', name: 'Больница', icon: '🏥', cost: 20000, buildSeconds: 45, description: '+$85 в мин., здоровье, строится 45 сек.' },
+  { id: 'police', name: 'Полиция', icon: '🚓', cost: 15000, buildSeconds: 45, description: '+$45 в мин., безопасность, строится 45 сек.' },
+  { id: 'fireStations', name: 'Пожарная', icon: '🚒', cost: 9000, buildSeconds: 45, description: '+$40 в мин., слабее пожары, строится 45 сек.' },
+  { id: 'parks', name: 'Парк', icon: '🌳', cost: 20000, buildSeconds: 15, description: '+$25 в мин., счастье, строится 15 сек.' },
+  { id: 'factories', name: 'Завод', icon: '🏭', cost: 50000, buildSeconds: 45, description: '+$300 в мин., -здоровье, строится 45 сек.' },
+  { id: 'malls', name: 'ТЦ', icon: '🛍️', cost: 100000, buildSeconds: 60, description: '+$900 в мин., строится 1 мин.' },
+  { id: 'airports', name: 'Аэропорт', icon: '✈️', cost: 150000, buildSeconds: 75, description: '+$2000 в мин., доверие, строится 1 мин. 15 сек.' },
+  { id: 'stations', name: 'Вокзал', icon: '🚉', cost: 70000, buildSeconds: 45, description: '+$450 в мин., жители, строится 45 сек.' },
+  { id: 'militaryBases', name: 'Военная база', icon: '🪖', cost: 500000, buildSeconds: 60, description: '+$650 в мин., безопасность, строится 1 мин.' },
 ];
 
 export const emptyBuildings: Record<BuildingId, number> = {
@@ -29,6 +33,11 @@ export const emptyBuildings: Record<BuildingId, number> = {
   airports: 0,
   stations: 0,
   militaryBases: 0,
+  stadiums: 0,
+  universities: 0,
+  banks: 0,
+  ports: 0,
+  museums: 0,
 };
 
 export const initialCity: CityStats = {
@@ -36,16 +45,18 @@ export const initialCity: CityStats = {
   minuteOfDay: 480,
   countryId: 'kazakhstan',
   countryPopulation: 20000000,
-  money: 200000,
+  money: startingMoney,
   population: 820,
   level: 1,
   xp: 0,
   taxRate: 12,
+  residentPayoutSeconds: firstPayoutGraceSeconds,
   happiness: 50,
   health: 70,
   safety: 50,
   trust: 50,
   buildings: emptyBuildings,
+  buildingSkins: { ...defaultBuildingSkins },
   buildingPositions: {},
   construction: [],
   activeIncident: {
@@ -59,6 +70,9 @@ export const initialCity: CityStats = {
     kind: 'chase',
   },
   incidentResponses: [],
+  claimedQuestIds: [],
+  hourlyQuests: [],
+  nextHourlyQuestAt: null,
   news: ['Тест: на карте запущена погоня.'],
 };
 
@@ -69,10 +83,14 @@ export const createInitialCity = (countryId: string): CityStats => ({
   level: 1,
   xp: 0,
   buildings: { ...emptyBuildings },
+  buildingSkins: { ...defaultBuildingSkins },
   buildingPositions: {},
   construction: [],
   activeIncident: null,
   incidentResponses: [],
+  claimedQuestIds: [],
+  hourlyQuests: [],
+  nextHourlyQuestAt: null,
   news: [],
 });
 

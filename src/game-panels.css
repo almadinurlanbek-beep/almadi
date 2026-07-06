@@ -32,22 +32,300 @@
 .reward { display: grid; gap: 8px; margin-top: 14px; }
 .reward input { width: 100%; accent-color: var(--accent); }
 
-.news, .income-list {
+.daily-reward {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr auto;
+  border-color: rgba(196, 139, 53, 0.36);
+}
+
+.daily-reward strong {
+  color: var(--gold);
+  display: block;
+  font-size: 20px;
+  margin-top: 4px;
+}
+
+.daily-reward small {
+  display: block;
+  margin-top: 3px;
+}
+
+.daily-streak {
+  background: #fff4dc;
+  border: 1px solid rgba(196, 139, 53, 0.28);
+  border-radius: 8px;
+  color: #7c4b09;
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 800;
+  margin-top: 6px;
+  padding: 4px 7px;
+}
+
+.playtime-reward {
+  display: grid;
+  gap: 8px;
+}
+
+.reward-heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reward-heading strong {
+  color: var(--accent-dark);
+  font-size: 18px;
+}
+
+.playtime-list {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.playtime-list button {
+  display: grid;
+  gap: 3px;
+  min-height: 54px;
+  padding: 7px 8px;
+  text-align: left;
+}
+
+.playtime-list small {
+  color: currentColor;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.friends-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.friends-heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.friends-heading strong {
+  align-items: center;
+  background: #f0f6f3;
+  border: 1px solid rgba(47, 125, 104, 0.22);
+  border-radius: 999px;
+  color: var(--accent-dark);
+  display: inline-flex;
+  font-size: 14px;
+  height: 30px;
+  justify-content: center;
+  min-width: 30px;
+  padding: 0 9px;
+}
+
+.friend-add {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr;
+}
+
+.friend-add input {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  min-width: 0;
+  padding: 8px 10px;
+}
+
+.friend-add-button {
+  width: 100%;
+}
+
+.friend-message {
+  background: #f0f6f3;
+  border: 1px solid rgba(47, 125, 104, 0.22);
+  border-radius: 8px;
+  color: var(--accent-dark);
+  line-height: 1.35;
+  padding: 8px 10px;
+}
+
+.friend-list {
+  display: grid;
+  gap: 6px;
+}
+
+.friend-item {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: 1fr auto;
+  padding: 8px 9px;
+}
+
+.friend-item small {
+  display: block;
+  margin-top: 2px;
+}
+
+.friend-view-button {
+  white-space: nowrap;
+}
+
+.friend-view {
+  align-items: center;
+  border-color: rgba(47, 125, 104, 0.32);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.quest-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.quest-heading {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.quest-heading button {
+  white-space: nowrap;
+}
+
+.quest-list {
+  display: grid;
+  gap: 8px;
+}
+
+.quest-group {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+}
+
+.quest-group > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.quest-item {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr auto;
+  padding: 8px;
+}
+
+.quest-item.ready {
+  border-color: rgba(196, 139, 53, 0.38);
+}
+
+.ai-quest {
+  background: #f0f6f3;
+  border-color: rgba(47, 125, 104, 0.28);
+}
+
+.hourly-quest {
+  background: #fffaf0;
+}
+
+.quest-empty {
+  color: var(--soft);
+  line-height: 1.4;
+}
+
+.quest-map-hint {
+  background: #f0f6f3;
+  border: 1px dashed rgba(47, 125, 104, 0.32);
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  padding: 9px;
+}
+
+.quest-map-hint small {
+  color: var(--soft);
+}
+
+.quest-item strong,
+.quest-item small {
+  display: block;
+}
+
+.quest-progress {
+  background: #e7eee9;
+  border-radius: 999px;
+  height: 7px;
+  margin: 7px 0 5px;
+  overflow: hidden;
+}
+
+.quest-progress span {
+  background: linear-gradient(90deg, var(--accent), var(--gold));
+  display: block;
+  height: 100%;
+  min-width: 6px;
+}
+
+.ai-advisor {
+  display: grid;
+  gap: 8px;
+}
+
+.advisor-heading {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.ai-advisor p:last-child {
+  background: #f0f6f3;
+  border: 1px solid rgba(47, 125, 104, 0.22);
+  border-radius: 8px;
+  color: var(--ink);
+  line-height: 1.45;
+  margin: 0;
+  padding: 9px 10px;
+}
+
+.income-list {
   display: grid; gap: 9px; list-style: none;
   margin: 12px 0 0; padding: 0;
 }
 
-.news li, .income-list li {
+.income-list li {
   background: rgba(255, 255, 255, 0.82); border: 1px solid var(--line);
   border-radius: 8px; line-height: 1.4; padding: 10px 12px;
 }
 
 .income-panel { padding: 14px; }
 .income-total { color: var(--accent-dark); font-size: 22px; font-weight: 800; margin-top: 6px; }
+.income-minute { display: block; margin-top: 2px; }
 .income-list { grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
 .income-list li { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; padding: 7px 8px; }
-.empty-news { color: var(--soft); line-height: 1.4; margin-top: 12px; }
-
 @media (max-width: 620px) {
   .country-panel { grid-template-columns: 1fr; }
+  .daily-reward { grid-template-columns: 1fr; }
+  .friend-add, .friend-item { grid-template-columns: 1fr; }
+  .playtime-list { grid-template-columns: 1fr; }
+  .advisor-heading { align-items: stretch; flex-direction: column; }
+  .quest-heading { align-items: stretch; flex-direction: column; }
+  .quest-item { grid-template-columns: 1fr; }
 }

@@ -1,4 +1,4 @@
-import { getIncomeBreakdown, getMinuteIncomeBreakdown, getTaxIncome } from '../lib/economy';
+import { getIncomeBreakdown, getMinuteIncome, getMinuteIncomeBreakdown, getTaxIncome } from '../lib/economy';
 import { formatMoney } from '../lib/format';
 import type { CityStats } from '../lib/gameTypes';
 
@@ -10,6 +10,7 @@ export function IncomePanel({ stats }: { stats: CityStats }) {
     <section className="panel income-panel">
       <p className="eyebrow">Доходы</p>
       <div className="income-total">+{formatMoney(getTaxIncome(stats))}</div>
+      <small className="income-minute">Объекты: +{formatMoney(getMinuteIncome(stats))} в минуту</small>
       <ul className="income-list">
         {[...income, ...minuteIncome].map((item) => (
           <li key={item.label}>

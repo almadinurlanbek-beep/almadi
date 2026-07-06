@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { createAirportTraffic, updateAirportTraffic, type AirportTraffic } from './cityAirportTraffic3d';
-import type { MapTile } from './cityMap';
+import { isRoadCell, type MapTile } from './cityMap';
 import { createBasicBuilding } from './cityBasicBuildings3d';
+import { applyBuildingSkin, defaultBuildingSkins } from './buildingSkins';
 import { createBridges } from './cityBridges3d';
 import { addConstructionSites } from './cityConstruction3d';
 import { createFactory } from './cityFactory3d';
@@ -13,12 +14,13 @@ import { createMallBuilding } from './cityMallBuildings3d';
 import { getMallVariantAt } from './cityMallZone';
 import { createLargePark } from './cityPark3d';
 import { addPedestrians, updatePedestrians, type Pedestrian } from './cityPeople3d';
+import { createRareBuilding } from './cityRareBuildings3d';
 import { addRailwayToScene, updateRailway, type Railway } from './cityRailway3d';
 import { addTrafficLights, updateTrafficLights, type TrafficLightRig } from './cityTrafficLights3d';
 import { createAirport, createStation } from './cityTransportBuildings3d';
 import { createParkTree, createVegetation } from './cityVegetation3d';
 import { addCarsToScene, updateCars, type MovingCar } from './cityVehicles3d';
-import type { CityStats } from './gameTypes';
+import type { BuildingSkinId, CityStats } from './gameTypes';
 
 export type SceneEntity = {
   airportTraffic: AirportTraffic;
@@ -46,7 +48,7 @@ export const buildCityScene = (scene: THREE.Scene, tiles: MapTile[], stats: City
   addCityHall(scene);
   addConstructionSites(scene, stats.construction);
   entities.trafficLights = addTrafficLights(scene, tiles);
-  tiles.forEach((tile) => addTileObject(scene, entities, tile));
+  tiles.forEach((tile) => addTileObject(scene, entities, tile, stats.buildingSkins));
   entities.fire = addIncidentMarker(scene, stats.activeIncident, stats.incidentResponses);
   entities.pedestrians = addPedestrians(scene, tiles);
   entities.cars = addCarsToScene(scene, stats);
@@ -107,24 +109,41 @@ const createRoadLineMesh = (tiles: MapTile[], width: number, depth: number, mate
   return mesh;
 };
 
-const addTileObject = (scene: THREE.Scene, entities: SceneEntity, tile: MapTile) => {
+const addTileObject = (scene: THREE.Scene, entities: SceneEntity, tile: MapTile, skins: CityStats['buildingSkins']) => {
   if (!tile.count && tile.model !== 'park') return;
   if (tile.model === 'lot' || tile.model === 'road' || tile.model === 'water') return;
   const position = tileToPosition(tile.x, tile.y, 0.1);
-  const model = tile.model === 'park' ? createParkModel(tile, entities) : createCityBuildingModel(tile);
-  if (tile.rotation !== undefined) model.rotation.y = tile.rotation;
+  const model = tile.model === 'park' ? createParkModel(tile, entities, skins.parks) : createCityBuildingModel(tile, skins);
+  model.rotation.y = tile.rotation ?? getRoadFacingRotation(tile);
   model.position.copy(position);
   scene.add(model);
   if (tile.count) scene.add(createCountLabel('1', position.clone().add(new THREE.Vector3(0, getLabelHeight(tile), 0))));
 };
 
-export const createCityBuildingModel = (tile: MapTile) => {
+const getRoadFacingRotation = (tile: MapTile) => {
+  const directions = [
+    { dx: 1, dy: 0 },
+    { dx: -1, dy: 0 },
+    { dx: 0, dy: 1 },
+    { dx: 0, dy: -1 },
+  ];
+  const direction = directions.find(({ dx, dy }) => isRoadCell(tile.x + dx, tile.y + dy));
+  return direction ? Math.atan2(direction.dx, direction.dy) : 0;
+};
+
+export const createCityBuildingModel = (tile: MapTile, skins: CityStats['buildingSkins'] = defaultBuildingSkins) => {
   const model = tile.model;
-  if (model === 'factory') return createFactory();
-  if (model === 'mall') return createMallBuilding(getMallVariantAt(tile.x, tile.y));
-  if (model === 'airport') return faceCity(createAirport(), tile);
-  if (model === 'station') return faceCity(createStation(), tile);
-  return createBasicBuilding(model);
+  const buildingId = tile.buildingId;
+  const skin = buildingId ? skins[buildingId] : 'classic';
+  if (model === 'factory') return applyBuildingSkin(createFactory(), skin);
+  if (model === 'mall') return applyBuildingSkin(createMallBuilding(getMallVariantAt(tile.x, tile.y)), skin);
+  if (model === 'park') return applyBuildingSkin(createLargePark(), skin);
+  if (model === 'airport') return applyBuildingSkin(faceCity(createAirport(), tile), skin);
+  if (model === 'station') return applyBuildingSkin(faceCity(createStation(), tile), skin);
+  if (model === 'stadium' || model === 'university' || model === 'bank' || model === 'port' || model === 'museum') {
+    return applyBuildingSkin(createRareBuilding(model), skin);
+  }
+  return applyBuildingSkin(createBasicBuilding(model), skin);
 };
 
 const faceCity = (model: THREE.Group, tile: MapTile) => {
@@ -144,6 +163,8 @@ const getLabelHeight = (tile: MapTile) => {
   if (tile.model === 'hospital') return 4.2;
   if (tile.model === 'police' || tile.model === 'fire') return 5.4;
   if (tile.model === 'park') return 3.4;
+  if (tile.model === 'stadium' || tile.model === 'port') return 4.2;
+  if (tile.model === 'university' || tile.model === 'bank' || tile.model === 'museum') return 4.8;
   return 2.8;
 };
 
@@ -162,8 +183,8 @@ const createGrassPatch = (entities: SceneEntity) => {
   return group;
 };
 
-const createParkModel = (tile: MapTile, entities: SceneEntity) => {
-  if (tile.count) return createLargePark();
+const createParkModel = (tile: MapTile, entities: SceneEntity, skin: BuildingSkinId) => {
+  if (tile.count) return applyBuildingSkin(createLargePark(), skin);
   return createGrassPatch(entities);
 };
 

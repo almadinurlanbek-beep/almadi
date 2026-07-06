@@ -39,13 +39,23 @@ Deno.serve(async (req) => {
     );
 
     const data = await res.json();
+    if (!res.ok) {
+      const message = data?.error?.message ?? `Gemini вернул ошибку ${res.status}`;
+      throw new Error(message);
+    }
+
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    if (!text) {
+      const reason = data?.promptFeedback?.blockReason ? ` Причина: ${data.promptFeedback.blockReason}` : '';
+      throw new Error(`Gemini не вернул текст.${reason}`);
+    }
+
     return new Response(JSON.stringify({ text }), {
       headers: { ...cors, 'Content-Type': 'application/json' },
     });
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e) }), {
-      status: 500,
+      status: 200,
       headers: { ...cors, 'Content-Type': 'application/json' },
     });
   }

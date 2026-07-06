@@ -18,11 +18,16 @@ export const createFactory = () => {
     new THREE.CylinderGeometry(0.08, 0.08, 1.1, 8),
     new THREE.MeshLambertMaterial({ color: 0xb9b1a3 }),
   );
+  const pad = new THREE.Mesh(
+    new THREE.BoxGeometry(1.95, 0.08, 1.62),
+    new THREE.MeshLambertMaterial({ color: 0xa9aca5 }),
+  );
+  pad.position.y = 0.04;
   base.position.y = 0.55;
   roof.position.y = 1.18;
   chimney.position.set(0.5, 1.85, -0.34);
   pipe.position.set(-0.45, 1.55, 0.36);
-  group.add(base, roof, chimney, pipe, createFactoryWindows());
+  group.add(pad, base, roof, chimney, pipe, createFactoryWindows());
   return group;
 };
 

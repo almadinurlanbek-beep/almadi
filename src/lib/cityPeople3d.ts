@@ -21,8 +21,9 @@ export type Pedestrian = {
 export const addPedestrians = (scene: THREE.Scene, tiles: MapTile[]) => (
   tiles
     .filter((tile) => (tile.count && ['home', 'mall'].includes(tile.model)) || tile.model === 'park')
-    .slice(0, 44)
+    .slice(0, 28)
     .flatMap((tile, tileIndex) => createTilePeople(scene, tile, tileIndex))
+    .slice(0, 64)
 );
 
 export const updatePedestrians = (pedestrians: Pedestrian[], time: number) => {

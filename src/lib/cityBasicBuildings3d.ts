@@ -21,8 +21,9 @@ export const createBasicBuilding = (model: MapTile['model']) => {
     shop: 0x8cc0d8,
   };
   const height = model === 'mall' ? 2.3 : 1.25;
-  const width = model === 'mall' ? 3.4 : 1.25;
-  const depth = model === 'mall' ? 2.8 : 1.25;
+  const width = model === 'mall' ? 3.4 : model === 'school' ? 2.15 : 1.25;
+  const depth = model === 'mall' ? 2.8 : model === 'school' ? 1.65 : 1.25;
+  group.add(createPart(width + 0.32, 0.08, depth + 0.32, new THREE.MeshLambertMaterial({ color: 0xb9c0b4 }), 0, 0.04, 0));
   const base = new THREE.Mesh(
     new THREE.BoxGeometry(width, height, depth),
     new THREE.MeshLambertMaterial({ color: colors[model] ?? 0xdddddd }),
@@ -30,10 +31,12 @@ export const createBasicBuilding = (model: MapTile['model']) => {
   base.position.y = height / 2;
   group.add(base);
   if (model === 'home') addHomeWindows(group);
+  if (model === 'school') addSchoolDetails(group);
   if (model === 'mall') addMallDetails(group);
+  if (model !== 'mall') addFrontDoor(group, depth);
 
   const roof = new THREE.Mesh(
-    new THREE.ConeGeometry(0.95, 0.55, 4),
+    new THREE.ConeGeometry(Math.max(width, depth) * 0.68, 0.55, 4),
     new THREE.MeshLambertMaterial({ color: model === 'home' ? 0x9d4c38 : 0x5d6870 }),
   );
   roof.position.y = height + 0.28;
@@ -59,6 +62,7 @@ const createShop = () => {
   const wall = new THREE.MeshLambertMaterial({ color: 0xf0d3a2 });
   const trim = new THREE.MeshLambertMaterial({ color: 0x3f6f89 });
   const glass = new THREE.MeshLambertMaterial({ color: 0x9bd3df, emissive: 0x376b78, emissiveIntensity: 0.22 });
+  group.add(createPart(2.12, 0.08, 1.72, new THREE.MeshLambertMaterial({ color: 0xb9c0b4 }), 0, 0.04, 0));
   group.add(createPart(1.65, 1.15, 1.28, wall, 0, 0.58, 0));
   group.add(createPart(1.86, 0.16, 1.44, trim, 0, 1.24, 0));
   group.add(createPart(1.95, 0.14, 0.58, new THREE.MeshLambertMaterial({ color: 0xd94f42 }), 0, 1.05, -0.9));
@@ -94,6 +98,24 @@ const createPart = (width: number, height: number, depth: number, material: THRE
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material);
   mesh.position.set(x, y, z);
   return mesh;
+};
+
+const addFrontDoor = (group: THREE.Group, depth: number) => {
+  const door = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.58, 0.035), new THREE.MeshLambertMaterial({ color: 0x5a3f2b }));
+  door.position.set(0, 0.34, -depth / 2 - 0.02);
+  group.add(door);
+};
+
+const addSchoolDetails = (group: THREE.Group) => {
+  const glass = new THREE.MeshLambertMaterial({ color: 0x9bd3df, emissive: 0x376b78, emissiveIntensity: 0.2 });
+  [-0.7, 0, 0.7].forEach((x) => {
+    const windowMesh = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.28, 0.035), glass);
+    windowMesh.position.set(x, 0.82, -0.85);
+    group.add(windowMesh);
+  });
+  const sign = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.24, 0.04), new THREE.MeshLambertMaterial({ color: 0xfff4c7 }));
+  sign.position.set(0, 1.42, -0.85);
+  group.add(sign);
 };
 
 const addHomeWindows = (group: THREE.Group) => {

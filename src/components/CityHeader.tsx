@@ -3,9 +3,16 @@ import { getCountry } from '../lib/countries';
 import { getTaxIncome } from '../lib/economy';
 import { formatMoney } from '../lib/format';
 import { formatTime } from '../lib/gameLogic';
+import { IncomeTooltip } from './IncomeTooltip';
 import type { CityStats } from '../lib/gameTypes';
 
-export function CityHeader({ stats }: { stats: CityStats }) {
+type Props = {
+  friendCount: number;
+  onOpenFriends: () => void;
+  stats: CityStats;
+};
+
+export function CityHeader({ friendCount, onOpenFriends, stats }: Props) {
   const country = getCountry(stats.countryId);
   const level = stats.level ?? 1;
   const xp = stats.xp ?? 0;
@@ -22,17 +29,26 @@ export function CityHeader({ stats }: { stats: CityStats }) {
 
   return (
     <header className="top">
-      <div>
-        <p className="eyebrow">День {stats.day} - {formatTime(stats.minuteOfDay)}</p>
-        <h1>City Mayor Simulator</h1>
+      <div className="top-heading">
+        <div>
+          <p className="eyebrow">День {stats.day} - {formatTime(stats.minuteOfDay)}</p>
+          <h1>City Mayor Simulator</h1>
+        </div>
       </div>
+      <button type="button" className="friend-top-button" onClick={onOpenFriends}>
+        Добавить друга
+        {friendCount > 0 && <span>{friendCount}</span>}
+      </button>
       <div className="metrics">
         {items.map(([icon, label, value]) => (
           <article className="metric" key={label}>
             <span>{icon}</span>
             <div>
               <small>{label}</small>
-              <strong>{value}</strong>
+              <strong className={label === 'Деньги' ? 'money-value' : undefined}>
+                {value}
+                {label === 'Деньги' && <IncomeTooltip stats={stats} />}
+              </strong>
             </div>
           </article>
         ))}

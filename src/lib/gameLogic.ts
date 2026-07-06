@@ -1,4 +1,4 @@
-ï»¿import { createInitialCity, incidents } from './gameData';
+import { createInitialCity, firstPayoutGraceSeconds, incidents } from './gameData';
 import { advanceConstruction, startBuild } from './constructionLogic';
 import { getMinuteIncome, getTaxIncome } from './economy';
 import { getConstructionTile, isRoadCell, isWaterCell } from './cityMap';
@@ -10,12 +10,13 @@ const DAY_MINUTES = 1440;
 const INCIDENT_INTERVAL = 360;
 const INCIDENT_DURATION_SECONDS = 120;
 const TEN_DAY_BONUS = 5000;
-const RESIDENT_PAYOUT_INTERVAL = 10;
-const RESIDENT_PAYOUT_RATE = 0.05;
+const RESIDENT_PAYOUT_SECONDS = 300;
+const RESIDENT_PAYOUT_RATE = 0.02;
 const MAX_HAPPINESS = 92;
 const MAX_SAFETY = 92;
 const MAX_TRUST = 90;
-const DEFEAT_HAPPINESS = 30;
+export const HAPPINESS_WARNING_LIMIT = 39;
+export const DEFEAT_HAPPINESS = 30;
 const DEFEAT_SAFETY = 39;
 const DEFEAT_TRUST = 39;
 
@@ -24,8 +25,12 @@ const clampHappiness = (value: number) => Math.max(0, Math.min(MAX_HAPPINESS, Ma
 const clampSafety = (value: number) => Math.max(0, Math.min(MAX_SAFETY, Math.round(value)));
 const clampTrust = (value: number) => Math.max(0, Math.min(MAX_TRUST, Math.round(value)));
 const changeHappiness = (current: number, delta: number) => {
-  const speed = delta > 0 ? 0.65 : 1.7;
+  const speed = delta > 0 ? 0.65 : 0.32;
   return clampHappiness(current + delta * speed);
+};
+const changeSafety = (current: number, delta: number) => {
+  const speed = delta > 0 ? 1 : 0.25;
+  return clampSafety(current + delta * speed);
 };
 const pick = <T,>(items: T[]) => items[Math.floor(Math.random() * items.length)];
 const randomJump = () => Math.floor(Math.random() * 3) - 1;
@@ -38,7 +43,7 @@ export const formatTime = (minuteOfDay: number) => {
 
 const withAlert = (stats: CityStats, item: string): CityStats => ({
   ...stats,
-  news: [`Ð”ÐµÐ½ÑŒ ${stats.day}, ${formatTime(stats.minuteOfDay)}: ${item}`, ...stats.news].slice(0, 7),
+  news: [`Äåíü ${stats.day}, ${formatTime(stats.minuteOfDay)}: ${item}`, ...stats.news].slice(0, 7),
 });
 
 export const build = startBuild;
@@ -57,7 +62,7 @@ export const changeTax = (stats: CityStats, delta: number): CityStats => {
 export const advanceMinute = (stats: CityStats): CityStats => {
   const minuteOfDay = (stats.minuteOfDay + 1) % DAY_MINUTES;
   const minuteIncome = getMinuteIncome(stats);
-  const base = applyMoodJumps(applyResidentPayout(updateCountryPopulation({ ...stats, minuteOfDay, money: stats.money + minuteIncome })));
+  const base = applyMoodJumps(updateCountryPopulation({ ...stats, minuteOfDay, money: stats.money + minuteIncome }));
   const afterDayChange = minuteOfDay === 0 ? startNewDay(base) : base;
 
   if (minuteOfDay > 0 && minuteOfDay % INCIDENT_INTERVAL === 0) {
@@ -69,13 +74,12 @@ export const advanceMinute = (stats: CityStats): CityStats => {
 
 const applyMoodJumps = (stats: CityStats): CityStats => ({
   ...stats,
-  happiness: clampHappiness(stats.happiness + randomJump()),
-  safety: clampSafety(stats.safety + randomJump()),
+  happiness: changeHappiness(stats.happiness, randomJump()),
+  safety: changeSafety(stats.safety, randomJump()),
   trust: clampTrust(stats.trust + randomJump()),
 });
 
 const applyResidentPayout = (stats: CityStats): CityStats => {
-  if (stats.minuteOfDay === 0 || stats.minuteOfDay % RESIDENT_PAYOUT_INTERVAL !== 0) return stats;
   const payout = Math.round(stats.money * RESIDENT_PAYOUT_RATE);
   if (payout <= 0) return stats;
   return {
@@ -84,6 +88,12 @@ const applyResidentPayout = (stats: CityStats): CityStats => {
     happiness: changeHappiness(stats.happiness, 1),
     trust: clampTrust(stats.trust + 1),
   };
+};
+
+const tickResidentPayout = (stats: CityStats): CityStats => {
+  const remaining = Math.max(1, stats.residentPayoutSeconds ?? firstPayoutGraceSeconds) - 1;
+  if (remaining > 0) return { ...stats, residentPayoutSeconds: remaining };
+  return { ...applyResidentPayout(stats), residentPayoutSeconds: RESIDENT_PAYOUT_SECONDS };
 };
 
 const updateCountryPopulation = (stats: CityStats): CityStats => {
@@ -98,12 +108,13 @@ const updateCountryPopulation = (stats: CityStats): CityStats => {
 };
 
 export const advanceTime = (stats: CityStats): CityStats => {
-  if (stats.incidentResponses.length > 0) {
-    return resetIfDefeated(advanceConstruction(tickIncidentTimer(advanceIncidentResponse(stats))));
+  const withPayoutTimer = tickResidentPayout(stats);
+  if (withPayoutTimer.incidentResponses.length > 0) {
+    return resetIfDefeated(advanceConstruction(tickIncidentTimer(advanceIncidentResponse(withPayoutTimer))));
   }
 
   const steps = stats.activeIncident ? 1 : 3;
-  let next = stats;
+  let next = withPayoutTimer;
 
   for (let step = 0; step < steps; step += 1) {
     next = advanceMinute(next);
@@ -120,9 +131,9 @@ const startNewDay = (stats: CityStats): CityStats => {
   const taxMood = stats.taxRate > 18 ? -3 : stats.taxRate < 9 ? 2 : 0;
   const services = stats.buildings.hospitals + stats.buildings.police + stats.buildings.parks;
   const emergencyTeams = stats.buildings.police + stats.buildings.fireStations;
-  const safetyPressure = Math.floor(stats.population / 650);
-  const safetyDelta = Math.round(emergencyTeams * 1.4 - safetyPressure);
-  const crowded = stats.population > stats.buildings.homes * 230 ? -4 : 1;
+  const safetyPressure = Math.floor(stats.population / 1100);
+  const safetyDelta = emergencyTeams * 1.4 - safetyPressure;
+  const crowded = stats.population > stats.buildings.homes * 260 ? -1.2 : 1;
   const next = {
     ...stats,
     day: nextDay,
@@ -130,10 +141,10 @@ const startNewDay = (stats: CityStats): CityStats => {
     population: Math.max(100, stats.population + Math.round((stats.happiness - 50) / 4)),
     happiness: changeHappiness(stats.happiness, taxMood + crowded + stats.buildings.parks),
     health: clamp(stats.health + stats.buildings.hospitals - stats.buildings.factories),
-    safety: clampSafety(stats.safety + safetyDelta),
+    safety: changeSafety(stats.safety, safetyDelta),
     trust: clampTrust(stats.trust + Math.round((services - 3) / 2) + taxMood),
   };
-  return bonus > 0 ? withAlert(next, 'Ð“Ð¾Ñ€Ð¾Ð´ Ð¿Ð¾Ð»ÑƒÑ‡Ð¸Ð» Ð¿Ð»Ð°Ð½Ð¾Ð²ÑƒÑŽ Ð²Ñ‹Ð¿Ð»Ð°Ñ‚Ñƒ $5000.') : next;
+  return bonus > 0 ? withAlert(next, 'Ãîðîä ïîëó÷èë ïëàíîâóþ âûïëàòó $5000.') : next;
 };
 
 const triggerScheduledIncident = (stats: CityStats): CityStats => {
@@ -144,8 +155,8 @@ const triggerScheduledIncident = (stats: CityStats): CityStats => {
 
 const punishUnresolvedIncident = (stats: CityStats): CityStats => ({
   ...stats,
-  happiness: changeHappiness(stats.happiness, -3),
-  safety: clampSafety(stats.safety - 4),
+  happiness: changeHappiness(stats.happiness, -1),
+  safety: changeSafety(stats.safety, -1.5),
   trust: clampTrust(stats.trust - 5),
 });
 
@@ -158,14 +169,27 @@ const createIncident = (stats: CityStats): Incident => {
     id: `${Date.now()}-${Math.random()}`,
     severity,
     remainingSeconds: INCIDENT_DURATION_SECONDS,
-    tile: base.kind === 'epidemic' ? getEpidemicTile(stats) : undefined,
+    tile: getIncidentTile(stats, base.kind),
   };
 };
 
 const isIncidentAvailable = (stats: CityStats, incident: Omit<Incident, 'id' | 'severity' | 'remainingSeconds'>) => {
   if (incident.requiredBuilding && stats.buildings[incident.requiredBuilding] <= 0) return false;
   if (incident.kind === 'epidemic') return stats.buildings.homes > 10 && stats.buildings.malls > 5;
+  if (incident.kind === 'terror') return stats.buildings.malls > 0;
   return true;
+};
+
+const getIncidentTile = (stats: CityStats, kind: Incident['kind']) => {
+  if (kind === 'epidemic') return getEpidemicTile(stats);
+  if (kind === 'terror') return getMallIncidentTile(stats);
+  return undefined;
+};
+
+const getMallIncidentTile = (stats: CityStats): TilePoint => {
+  const mallTiles = stats.buildingPositions.malls?.filter(Boolean) ?? [];
+  if (mallTiles.length > 0) return pick(mallTiles);
+  return getConstructionTile('malls', Math.max(0, Math.floor(Math.random() * stats.buildings.malls)));
 };
 
 const getEpidemicTile = (stats: CityStats): TilePoint => {
@@ -192,7 +216,7 @@ const tickIncidentTimer = (stats: CityStats): CityStats => {
   }
   return withAlert(
     { ...punishUnresolvedIncident(stats), activeIncident: null, incidentResponses: [] },
-    'ÐŸÑ€Ð¾Ð¸ÑÑˆÐµÑÑ‚Ð²Ð¸Ðµ Ð´Ð»Ð¸Ð»Ð¾ÑÑŒ 2 Ð¼Ð¸Ð½ÑƒÑ‚Ñ‹ Ð¸ Ð¾ÑÑ‚Ð°Ð»Ð¾ÑÑŒ Ð½ÐµÑ€ÐµÑˆÐµÐ½Ð½Ñ‹Ð¼.',
+    'Ïðîèñøåñòâèå äëèëîñü 2 ìèíóòû è îñòàëîñü íåðåøåííûì.',
   );
 };
 
@@ -208,14 +232,14 @@ const resetIfDefeated = (stats: CityStats): CityStats => {
   ) return stats;
 
   const reason = stats.safety < DEFEAT_SAFETY
-    ? 'Ð‘ÐµÐ·Ð¾Ð¿Ð°ÑÐ½Ð¾ÑÑ‚ÑŒ ÑƒÐ¿Ð°Ð»Ð° Ð½Ð¸Ð¶Ðµ 39%. Ð“Ð¾Ñ€Ð¾Ð´ Ð¾Ð±Ð½ÑƒÐ»Ð¸Ð»ÑÑ Ð¸Ð·-Ð·Ð° Ñ…Ð°Ð¾ÑÐ° Ð½Ð° ÑƒÐ»Ð¸Ñ†Ð°Ñ….'
+    ? 'Áåçîïàñíîñòü óïàëà íèæå 39%. Ãîðîä îáíóëèëñÿ èç-çà õàîñà íà óëèöàõ.'
     : stats.trust < DEFEAT_TRUST
-      ? 'Ð”Ð¾Ð²ÐµÑ€Ð¸Ðµ ÑƒÐ¿Ð°Ð»Ð¾ Ð½Ð¸Ð¶Ðµ 39%. Ð“Ð¾Ñ€Ð¾Ð´ Ð¾Ð±Ð½ÑƒÐ»Ð¸Ð»ÑÑ Ð¸Ð·-Ð·Ð° Ð¿Ð¾Ñ‚ÐµÑ€Ð¸ Ð¿Ð¾Ð´Ð´ÐµÑ€Ð¶ÐºÐ¸ Ð¶Ð¸Ñ‚ÐµÐ»ÐµÐ¹.'
-      : 'Ð¡Ñ‡Ð°ÑÑ‚ÑŒÐµ ÑƒÐ¿Ð°Ð»Ð¾ Ð½Ð¸Ð¶Ðµ 30%. Ð“Ð¾Ñ€Ð¾Ð´ Ð¾Ð±Ð½ÑƒÐ»Ð¸Ð»ÑÑ Ð¸Ð·-Ð·Ð° Ð½ÐµÐ´Ð¾Ð²Ð¾Ð»ÑŒÑÑ‚Ð²Ð° Ð¶Ð¸Ñ‚ÐµÐ»ÐµÐ¹.';
+      ? 'Äîâåðèå óïàëî íèæå 39%. Ãîðîä îáíóëèëñÿ èç-çà ïîòåðè ïîääåðæêè æèòåëåé.'
+      : 'Ñ÷àñòüå óïàëî íèæå 30%. Ãîðîä îáíóëèëñÿ èç-çà íåäîâîëüñòâà æèòåëåé.';
 
   return {
     ...createInitialCity(stats.countryId),
-    news: [`Ð”ÐµÐ½ÑŒ ${stats.day}, ${formatTime(stats.minuteOfDay)}: ${reason}`],
+    news: [`Äåíü ${stats.day}, ${formatTime(stats.minuteOfDay)}: ${reason}`],
   };
 };
 

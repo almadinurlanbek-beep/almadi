@@ -5,9 +5,11 @@ import { applyDayNightLights, getDayNightLights } from '../lib/cityDayNight3d';
 import { tileToPosition } from '../lib/cityGrid3d';
 import { pickTileFromPointer } from '../lib/cityMapPicking3d';
 import { createSkyBodies, updateSkyBodies } from '../lib/citySkyBodies3d';
-import { createCityTiles } from '../lib/cityMap';
+import { createQuestLabel } from '../lib/cityLabels3d';
+import type { MapTile } from '../lib/cityMap';
 import { createBuildingDragPreview, removeBuildingDragPreview, updateBuildingDragPreview, type BuildingDragPreview } from '../lib/cityDragPreview3d';
 import type { BuildingId, CityStats, TilePoint } from '../lib/gameTypes';
+import type { QuestMapMarker } from '../lib/questMapMarkers';
 import { disposeScene } from '../lib/threeDispose';
 type DragMode = 'pan' | 'rotate' | 'zoom';
 type DraggedBuilding = {
@@ -21,37 +23,44 @@ type CameraOrbit = {
 };
 type Props = {
   stats: CityStats;
+  tiles: MapTile[];
+  questMarkers: QuestMapMarker[];
   onTileClick: (point: TilePoint) => void;
+  onQuestMarkerClick: (questId: string) => void;
   onBuildingDragStart: (point: TilePoint) => DraggedBuilding | null;
   onBuildingDrop: (building: DraggedBuilding, point: TilePoint) => void;
 };
 
-export function CityMap3D({ stats, onTileClick, onBuildingDragStart, onBuildingDrop }: Props) {
+export function CityMap3D({ stats, tiles, questMarkers, onTileClick, onQuestMarkerClick, onBuildingDragStart, onBuildingDrop }: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const targetRef = useRef(tileToPosition(8, 8));
   const orbitRef = useRef<CameraOrbit>({ yaw: 0.56, distance: 34, height: 30 });
   const minuteRef = useRef(stats.minuteOfDay);
   const tileClickRef = useRef(onTileClick);
+  const questClickRef = useRef(onQuestMarkerClick);
   const dragStartRef = useRef(onBuildingDragStart);
   const dropRef = useRef(onBuildingDrop);
   const sceneKey = useMemo(
     () => JSON.stringify({
       buildings: stats.buildings,
+      skins: stats.buildingSkins,
       positions: stats.buildingPositions,
+      questMarkers: questMarkers.map((marker) => `${marker.id}:${marker.kind}:${marker.title}:${marker.x}:${marker.y}`),
       construction: stats.construction.map((job) => job.id),
       incident: stats.activeIncident?.id,
       responses: stats.incidentResponses.map((response) => response.method),
     }),
-    [stats.activeIncident?.id, stats.buildings, stats.buildingPositions, stats.construction, stats.incidentResponses],
+    [questMarkers, stats.activeIncident?.id, stats.buildings, stats.buildingSkins, stats.buildingPositions, stats.construction, stats.incidentResponses],
   );
   useEffect(() => {
     minuteRef.current = stats.minuteOfDay;
   }, [stats.minuteOfDay]);
   useEffect(() => {
     tileClickRef.current = onTileClick;
+    questClickRef.current = onQuestMarkerClick;
     dragStartRef.current = onBuildingDragStart;
     dropRef.current = onBuildingDrop;
-  }, [onTileClick, onBuildingDragStart, onBuildingDrop]);
+  }, [onTileClick, onQuestMarkerClick, onBuildingDragStart, onBuildingDrop]);
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return undefined;
@@ -87,7 +96,10 @@ export function CityMap3D({ stats, onTileClick, onBuildingDragStart, onBuildingD
     const skyBodies = createSkyBodies();
     scene.add(skyBodies.sun, skyBodies.moon);
     applyDayNightLights(scene, fog, hemi, sun, stats.minuteOfDay);
-    const entities = buildCityScene(scene, createCityTiles(stats), stats);
+    const entities = buildCityScene(scene, tiles, stats);
+    questMarkers.forEach((marker) => {
+      scene.add(createQuestLabel(tileToPosition(marker.x, marker.y, 3.8), marker.kind, marker.title));
+    });
     const drag: { active: boolean; mode: DragMode; x: number; y: number } = {
       active: false,
       mode: 'pan',
@@ -105,7 +117,13 @@ export function CityMap3D({ stats, onTileClick, onBuildingDragStart, onBuildingD
       camera.updateProjectionMatrix();
       renderer.setSize(host.clientWidth, host.clientHeight);
     };
+    let lastRenderMs = 0;
     const render = (timeMs: number) => {
+      if (timeMs - lastRenderMs < 33) {
+        frame = requestAnimationFrame(render);
+        return;
+      }
+      lastRenderMs = timeMs;
       updateCityScene(scene, entities, timeMs / 1000);
       applyDayNightLights(scene, fog, hemi, sun, minuteRef.current);
       updateSkyBodies(skyBodies, minuteRef.current);
@@ -183,7 +201,13 @@ export function CityMap3D({ stats, onTileClick, onBuildingDragStart, onBuildingD
     const preventMenu = (event: MouseEvent) => event.preventDefault();
     const pickTile = (event: PointerEvent) => {
       const point = pickTileFromPointer(event, renderer.domElement, camera);
-      if (point) tileClickRef.current(point);
+      if (!point) return;
+      const questMarker = findQuestMarkerNear(point, questMarkers);
+      if (questMarker) {
+        questClickRef.current(questMarker.id);
+        return;
+      }
+      tileClickRef.current(point);
     };
     let frame = requestAnimationFrame(render);
     window.addEventListener('resize', resize);
@@ -201,6 +225,10 @@ export function CityMap3D({ stats, onTileClick, onBuildingDragStart, onBuildingD
       renderer.dispose();
       host.replaceChildren();
     };
-  }, [sceneKey]);
+  }, [sceneKey, tiles]);
   return <div className="city-3d-viewport" ref={hostRef} />;
 }
+
+const findQuestMarkerNear = (point: TilePoint, markers: QuestMapMarker[]) => {
+  return markers.find((marker) => Math.max(Math.abs(marker.x - point.x), Math.abs(marker.y - point.y)) <= 2) ?? null;
+};

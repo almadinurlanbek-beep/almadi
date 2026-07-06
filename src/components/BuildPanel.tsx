@@ -9,7 +9,7 @@ type Props = {
 
 export function BuildPanel({ stats, onBuild }: Props) {
   return (
-    <section className="panel">
+    <section className="panel build-panel">
       <p className="eyebrow">Строительство</p>
       <div className="build-grid">
         {buildings.map((building) => (

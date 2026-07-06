@@ -19,6 +19,7 @@ export const createHospital = () => {
   group.add(createAmbulance(2.25, -1.55, Math.PI / 2));
   group.add(createAmbulance(2.25, -0.35, Math.PI / 2));
   group.add(createServiceVan(2.25, 1.0, Math.PI / 2));
+  group.scale.set(0.72, 0.86, 0.72);
   return group;
 };
 
