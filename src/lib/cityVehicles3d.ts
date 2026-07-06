@@ -52,10 +52,10 @@ export const addCarsToScene = (scene: THREE.Scene, stats: CityStats) => {
 
 export const updateCars = (cars: MovingCar[], time: number) => {
   let extinguishing = false;
-  const occupied: THREE.Vector3[] = [];
-  cars.forEach((car) => {
-    extinguishing = moveCar(car, time, occupied) || extinguishing;
-    occupied.push(car.mesh.position.clone());
+  const positions = cars.map((car) => car.mesh.position.clone());
+  cars.forEach((car, index) => {
+    extinguishing = moveCar(car, time, positions, index) || extinguishing;
+    positions[index] = car.mesh.position.clone();
   });
   return extinguishing;
 };
@@ -129,31 +129,44 @@ const addCar = (
   };
 };
 
-const moveCar = (car: MovingCar, time: number, occupied: THREE.Vector3[]) => {
+const moveCar = (car: MovingCar, time: number, occupied: THREE.Vector3[], carIndex: number) => {
   const delta = car.lastTime === undefined ? 0 : Math.max(0, time - car.lastTime) * car.speed;
   car.lastTime = time;
-  const total = car.routeProgress + delta;
+  const plannedTotal = car.routeProgress + delta;
+  const planned = getRouteState(car, plannedTotal);
+  const direction = getCarDirection(car, planned.reachedTarget, planned.segment, planned.next);
+  const stopProgress = getStopProgressBeforeLight(car.path[planned.segment], car.path[planned.next]);
+  const redLightStop = !planned.reachedTarget
+    && stopProgress !== null
+    && planned.progress > stopProgress
+    && isRedLightForSegment(car.path[planned.segment], car.path[planned.next], time);
+  const lane = new THREE.Vector3(-direction.z, 0, direction.x).normalize().multiplyScalar(car.laneOffset);
+  const plannedProgress = redLightStop ? stopProgress : planned.progress;
+  const nextPosition = car.path[planned.segment].clone().lerp(car.path[planned.next], plannedProgress).add(lane);
+  const trafficStop = !planned.reachedTarget && isPositionBlocked(nextPosition, car.mesh.position, direction, occupied, carIndex, getVehicleClearance(car.kind));
+  const shouldStop = redLightStop || trafficStop;
+
+  if (redLightStop) car.routeProgress = planned.segment + plannedProgress;
+  if (!shouldStop) car.routeProgress = plannedTotal;
+
+  const render = trafficStop ? getRouteState(car, car.routeProgress) : { ...planned, progress: plannedProgress };
+  const renderDirection = getCarDirection(car, render.reachedTarget, render.segment, render.next);
+  const renderLane = new THREE.Vector3(-renderDirection.z, 0, renderDirection.x).normalize().multiplyScalar(car.laneOffset);
+  car.mesh.position.lerpVectors(car.path[render.segment], car.path[render.next], render.progress).add(renderLane);
+  car.mesh.rotation.y = Math.atan2(renderDirection.z, -renderDirection.x) + (car.kind === 'ambulance' ? Math.PI : 0);
+  animateWheels(car, time, render.reachedTarget || shouldStop);
+  if (render.reachedTarget && car.deployedAt === undefined) car.deployedAt = time;
+  const deployProgress = car.deployedAt === undefined ? 0 : Math.min(1, (time - car.deployedAt) * 0.7);
+  updateFireCrew(car.crew, deployProgress, time);
+  return render.reachedTarget && car.kind === 'fire' && deployProgress >= 1;
+};
+
+const getRouteState = (car: MovingCar, total: number) => {
   const reachedTarget = car.stopAtEnd && total >= car.path.length - 1;
   const segment = reachedTarget ? car.path.length - 2 : Math.floor(total) % car.path.length;
   const next = reachedTarget ? car.path.length - 1 : (segment + 1) % car.path.length;
   const progress = reachedTarget ? 1 : total % 1;
-  const direction = getCarDirection(car, reachedTarget, segment, next);
-  const stopProgress = getStopProgressBeforeLight(car.path[segment], car.path[next]);
-  const redLightStop = !reachedTarget && stopProgress !== null && progress > stopProgress && isRedLightForSegment(car.path[segment], car.path[next], time);
-  const lane = new THREE.Vector3(-direction.z, 0, direction.x).normalize().multiplyScalar(car.laneOffset);
-  const nextPosition = car.path[segment].clone().lerp(car.path[next], redLightStop ? stopProgress : progress).add(lane);
-  const trafficStop = !reachedTarget && isPositionBlocked(nextPosition, occupied, getVehicleClearance(car.kind));
-  const shouldStop = redLightStop || trafficStop;
-  const safeProgress = redLightStop ? stopProgress : progress;
-  if (!shouldStop) car.routeProgress = total;
-  if (redLightStop) car.routeProgress = segment + safeProgress;
-  car.mesh.position.lerpVectors(car.path[segment], car.path[next], safeProgress).add(lane);
-  car.mesh.rotation.y = Math.atan2(direction.z, -direction.x) + (car.kind === 'ambulance' ? Math.PI : 0);
-  animateWheels(car, time, reachedTarget || shouldStop);
-  if (reachedTarget && car.deployedAt === undefined) car.deployedAt = time;
-  const deployProgress = car.deployedAt === undefined ? 0 : Math.min(1, (time - car.deployedAt) * 0.7);
-  updateFireCrew(car.crew, deployProgress, time);
-  return reachedTarget && car.kind === 'fire' && deployProgress >= 1;
+  return { reachedTarget, segment, next, progress };
 };
 
 const getCarDirection = (car: MovingCar, reachedTarget: boolean, segment: number, next: number) => {
@@ -173,6 +186,25 @@ const animateWheels = (car: MovingCar, time: number, stopped: boolean) => {
   });
 };
 
-const isPositionBlocked = (position: THREE.Vector3, occupied: THREE.Vector3[], clearance: number) => {
-  return occupied.some((other) => other.distanceTo(position) < clearance);
+const isPositionBlocked = (
+  position: THREE.Vector3,
+  currentPosition: THREE.Vector3,
+  direction: THREE.Vector3,
+  occupied: THREE.Vector3[],
+  carIndex: number,
+  clearance: number,
+) => {
+  const forward = direction.clone().normalize();
+  const side = new THREE.Vector3(-forward.z, 0, forward.x).normalize();
+  return occupied.some((other, index) => {
+    if (index === carIndex) return false;
+    const distance = other.distanceTo(position);
+    if (distance >= clearance) return false;
+    const toOther = other.clone().sub(currentPosition);
+    const ahead = toOther.dot(forward);
+    const lateral = Math.abs(toOther.dot(side));
+    const sameLane = lateral < 0.82;
+    const crossing = distance < clearance * 0.78;
+    return ahead > -0.25 && (sameLane || crossing);
+  });
 };
