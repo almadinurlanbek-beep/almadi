@@ -146,6 +146,12 @@ export default function App() {
     }
   };
 
+  const handleAdvisorQuestReady = (quest: AiQuest) => {
+    playSound('click');
+    setAiQuest(quest);
+    setSelectedQuestId(quest.id);
+  };
+
   const handleAiQuestClaim = async () => {
     if (!aiQuest || getAiQuestProgress(aiQuest, stats) < aiQuest.target) return;
     playSound('success');
@@ -471,7 +477,7 @@ export default function App() {
               onAdd={handleAddFriend}
               onViewCity={handleViewFriendCity}
             />
-            {!friendView && <AiAdvisorPanel stats={stats} />}
+            {!friendView && <AiAdvisorPanel stats={stats} activeQuest={aiQuest} onQuestReady={handleAdvisorQuestReady} />}
             {!friendView && (
               <QuestPanel
                 aiQuest={aiQuest}
