@@ -101,7 +101,7 @@ export function CityMap({ readOnly = false, questMarkers, stats, onDeleteBuildin
                 title={marker.title}
                 onClick={() => onQuestMarkerClick(marker.id)}
               >
-                <span>{getQuestMarkerIcon(marker.kind)}</span>
+                <span>{getQuestMarkerIcon(marker)}</span>
                 <strong>{marker.title}</strong>
               </button>
             ))}
@@ -148,7 +148,9 @@ const findBuildingNear = (point: TilePoint, tiles: ReturnType<typeof createCityT
   return nearest;
 };
 
-const getQuestMarkerIcon = (kind: QuestMapMarker['kind']) => {
+const getQuestMarkerIcon = (marker: QuestMapMarker) => {
+  if (marker.completed) return '✓';
+  const { kind } = marker;
   if (kind === 'ai') return 'AI';
   if (kind === 'hourly') return '!';
   return '?';

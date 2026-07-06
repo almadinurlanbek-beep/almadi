@@ -6,6 +6,7 @@ export type QuestMapMarker = {
   id: string;
   kind: QuestMarkerKind;
   title: string;
+  completed: boolean;
   x: number;
   y: number;
 };
@@ -26,7 +27,7 @@ const visibleAnchors = [
   { x: 30, y: 29 },
 ];
 
-export const createQuestMapMarkers = (quests: Array<{ id: string; kind: QuestMarkerKind; title: string }>): QuestMapMarker[] => {
+export const createQuestMapMarkers = (quests: Array<{ id: string; kind: QuestMarkerKind; title: string; completed: boolean }>): QuestMapMarker[] => {
   const occupied = new Set<string>();
   return quests.map((quest, index) => {
     const point = findMarkerPoint(quest.id, index, occupied);

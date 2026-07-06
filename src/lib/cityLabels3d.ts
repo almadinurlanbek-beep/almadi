@@ -23,7 +23,7 @@ export const createCountLabel = (text: string, position: THREE.Vector3) => {
   return sprite;
 };
 
-export const createQuestLabel = (position: THREE.Vector3, kind: QuestMarkerKind, title: string) => {
+export const createQuestLabel = (position: THREE.Vector3, kind: QuestMarkerKind, title: string, completed: boolean) => {
   const canvas = document.createElement('canvas');
   canvas.width = 256;
   canvas.height = 128;
@@ -46,7 +46,7 @@ export const createQuestLabel = (position: THREE.Vector3, kind: QuestMarkerKind,
     context.font = '800 42px Inter, sans-serif';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
-    context.fillText(getQuestIcon(kind), 128, 47);
+    context.fillText(getQuestIcon(kind, completed), 128, 47);
     context.fillStyle = '#1f453d';
     context.font = '800 18px Inter, sans-serif';
     context.fillText(trimTitle(title), 128, 94);
@@ -63,7 +63,8 @@ const getQuestColor = (kind: QuestMarkerKind) => {
   return '#2f7d68';
 };
 
-const getQuestIcon = (kind: QuestMarkerKind) => {
+const getQuestIcon = (kind: QuestMarkerKind, completed: boolean) => {
+  if (completed) return '✓';
   if (kind === 'ai') return 'AI';
   if (kind === 'hourly') return '!';
   return '?';

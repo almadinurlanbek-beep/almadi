@@ -73,11 +73,11 @@ export default function App() {
   const questMarkers = useMemo(() => {
     const mayor = getQuestStatuses(stats)
       .filter((quest) => !quest.claimed)
-      .map((quest) => ({ id: quest.id, kind: 'mayor' as const, title: quest.title }));
-    const hourly = getHourlyQuestStatuses(stats).map((quest) => ({ id: quest.id, kind: 'hourly' as const, title: quest.title }));
-    const ai = aiQuest ? [{ id: aiQuest.id, kind: 'ai' as const, title: aiQuest.title }] : [];
+      .map((quest) => ({ id: quest.id, kind: 'mayor' as const, title: quest.title, completed: quest.completed }));
+    const hourly = getHourlyQuestStatuses(stats).map((quest) => ({ id: quest.id, kind: 'hourly' as const, title: quest.title, completed: quest.completed }));
+    const ai = aiQuest ? [{ id: aiQuest.id, kind: 'ai' as const, title: aiQuest.title, completed: getAiQuestProgress(aiQuest, stats) >= aiQuest.target }] : [];
     return createQuestMapMarkers([...ai, ...hourly, ...mayor]);
-  }, [aiQuest, stats.claimedQuestIds, stats.hourlyQuests]);
+  }, [aiQuest, stats]);
 
   const updateCity = (change: (current: CityStats) => CityStats) => {
     setCities((current) => ({

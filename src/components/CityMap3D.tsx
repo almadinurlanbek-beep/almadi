@@ -98,7 +98,7 @@ export function CityMap3D({ stats, tiles, questMarkers, onTileClick, onQuestMark
     applyDayNightLights(scene, fog, hemi, sun, stats.minuteOfDay);
     const entities = buildCityScene(scene, tiles, stats);
     questMarkers.forEach((marker) => {
-      scene.add(createQuestLabel(tileToPosition(marker.x, marker.y, 3.8), marker.kind, marker.title));
+      scene.add(createQuestLabel(tileToPosition(marker.x, marker.y, 3.8), marker.kind, marker.title, marker.completed));
     });
     const drag: { active: boolean; mode: DragMode; x: number; y: number } = {
       active: false,
