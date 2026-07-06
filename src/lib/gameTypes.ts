@@ -36,6 +36,7 @@ export type CityStats = {
   countryId: string;
   countryPopulation: number;
   money: number;
+  moneyGrantVersion: number;
   population: number;
   level: number;
   xp: number;

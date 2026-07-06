@@ -2,7 +2,9 @@ import type { Building, BuildingId, CityStats, Incident } from './gameTypes';
 import { getCountry } from './countries';
 import { defaultBuildingSkins } from './buildingSkins';
 
-export const startingMoney = 500000;
+export const startingMoney = 1000000;
+export const moneyGrantAmount = 1000000;
+export const moneyGrantVersion = 1;
 export const firstPayoutGraceSeconds = 600;
 
 export const buildings: Building[] = [
@@ -50,6 +52,7 @@ export const initialCity: CityStats = {
   level: 1,
   xp: 0,
   taxRate: 12,
+  moneyGrantVersion,
   residentPayoutSeconds: firstPayoutGraceSeconds,
   happiness: 50,
   health: 70,

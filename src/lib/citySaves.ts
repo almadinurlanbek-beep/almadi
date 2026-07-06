@@ -1,6 +1,6 @@
 import { repairBuildingPositions } from './cityBuildingPlacement';
 import { normalizeHourlyQuests, normalizeSkins } from './citySaveNormalize';
-import { createInitialCity, emptyBuildings, firstPayoutGraceSeconds, initialCity, startingMoney } from './gameData';
+import { createInitialCity, emptyBuildings, firstPayoutGraceSeconds, initialCity, moneyGrantAmount, moneyGrantVersion, startingMoney } from './gameData';
 import { supabase } from './supabase';
 import type { CityStats } from './gameTypes';
 
@@ -75,15 +75,18 @@ const normalizeCity = (countryId: string, city: Partial<CityStats> | null): City
     }),
   ) as CityStats['buildings'];
 
-  const money = isFreshCity(saved, buildings)
+  const savedGrantVersion = normalizeNumber(saved.moneyGrantVersion, 0);
+  const baseMoney = isFreshCity(saved, buildings)
     ? Math.max(normalizeNumber(saved.money, startingMoney), startingMoney)
     : normalizeNumber(saved.money, startingMoney);
+  const money = baseMoney + (savedGrantVersion >= moneyGrantVersion ? 0 : moneyGrantAmount);
 
   return repairBuildingPositions({
     ...base,
     ...saved,
     countryId,
     money,
+    moneyGrantVersion,
     level: normalizeNumber(saved.level, base.level),
     xp: normalizeNumber(saved.xp, base.xp),
     residentPayoutSeconds: isFreshCity(saved, buildings)
