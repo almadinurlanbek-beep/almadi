@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>City Town Presentation</title>
+    <style>
+      :root {
+        color: #17212b;
+        font-family: Inter, Arial, sans-serif;
+        background: #eef3f7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      .deck {
+        height: 100vh;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        display: flex;
+      }
+
+      .slide {
+        min-width: 100vw;
+        min-height: 100vh;
+        scroll-snap-align: start;
+        display: grid;
+        place-items: center;
+        padding: 44px;
+      }
+
+      .content {
+        width: min(1120px, 100%);
+      }
+
+      .hero {
+        min-height: 76vh;
+        display: grid;
+        align-content: center;
+        gap: 28px;
+      }
+
+      .eyebrow {
+        color: #24706f;
+        font-size: 18px;
+        font-weight: 800;
+        letter-spacing: 0;
+        margin: 0;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2 {
+        letter-spacing: 0;
+        line-height: 1;
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(54px, 9vw, 116px);
+        max-width: 900px;
+      }
+
+      h2 {
+        font-size: clamp(42px, 7vw, 86px);
+        max-width: 980px;
+      }
+
+      p {
+        font-size: clamp(22px, 3vw, 36px);
+        line-height: 1.22;
+        margin: 0;
+        max-width: 880px;
+      }
+
+      .fact {
+        background: #ffffff;
+        border: 1px solid #d9e4e9;
+        border-radius: 8px;
+        max-width: 700px;
+        padding: 24px;
+      }
+
+      .app-name {
+        color: #24706f;
+      }
+
+      .screens {
+        display: grid;
+        gap: 18px;
+        grid-template-columns: 1.15fr 0.85fr;
+        margin-top: 30px;
+      }
+
+      .screens img,
+      .video-frame,
+      .qr-card {
+        background: #ffffff;
+        border: 1px solid #d9e4e9;
+        border-radius: 8px;
+        box-shadow: 0 24px 70px rgba(37, 53, 65, 0.14);
+      }
+
+      .screens img {
+        height: 315px;
+        object-fit: cover;
+        object-position: top;
+        width: 100%;
+      }
+
+      .screens img:first-child {
+        grid-row: span 2;
+        height: 648px;
+      }
+
+      .video-frame {
+        align-items: center;
+        aspect-ratio: 16 / 9;
+        display: grid;
+        justify-items: center;
+        margin-top: 34px;
+        overflow: hidden;
+        padding: 38px;
+        text-align: center;
+      }
+
+      .video-frame strong {
+        color: #24706f;
+        display: block;
+        font-size: clamp(34px, 5vw, 72px);
+        line-height: 1;
+        margin-bottom: 18px;
+      }
+
+      .video-frame span {
+        color: #51616f;
+        display: block;
+        font-size: clamp(20px, 2.4vw, 32px);
+        line-height: 1.25;
+        max-width: 720px;
+      }
+
+      .cta-grid {
+        align-items: center;
+        display: grid;
+        gap: 40px;
+        grid-template-columns: 340px 1fr;
+        margin-top: 34px;
+      }
+
+      .qr-card {
+        display: grid;
+        gap: 16px;
+        justify-items: center;
+        padding: 30px;
+      }
+
+      .qr-card img {
+        height: 260px;
+        width: 260px;
+      }
+
+      .qr-card a {
+        color: #24706f;
+        font-size: 17px;
+        font-weight: 800;
+        text-decoration: none;
+        word-break: break-word;
+      }
+
+      .cta {
+        color: #111a22;
+        font-size: clamp(34px, 5vw, 72px);
+        font-weight: 900;
+        line-height: 1.04;
+      }
+
+      .nav-note {
+        bottom: 18px;
+        color: #6b7a86;
+        font-size: 15px;
+        left: 50%;
+        position: fixed;
+        transform: translateX(-50%);
+      }
+
+      .slide-controls {
+        align-items: center;
+        display: flex;
+        gap: 10px;
+        position: fixed;
+        right: 22px;
+        top: 18px;
+        z-index: 10;
+      }
+
+      .slide-controls button,
+      .slide-counter {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid #d9e4e9;
+        border-radius: 8px;
+        color: #17212b;
+        font: inherit;
+        font-size: 16px;
+        font-weight: 800;
+        min-height: 42px;
+      }
+
+      .slide-controls button {
+        cursor: pointer;
+        min-width: 48px;
+      }
+
+      .slide-counter {
+        display: grid;
+        min-width: 74px;
+        place-items: center;
+        padding: 0 12px;
+      }
+
+      @media (max-width: 760px) {
+        .slide {
+          padding: 24px;
+        }
+
+        .screens,
+        .cta-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .screens img,
+        .screens img:first-child {
+          height: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="deck">
+      <section class="slide">
+        <div class="content hero">
+          <p class="eyebrow">Slide 1</p>
+          <h1>Алмади Нурланбек</h1>
+          <p class="fact">Маленький факт: мне нравится создавать игры, где город оживает от решений игрока.</p>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="content hero">
+          <p class="eyebrow">Slide 2</p>
+          <h2><span class="app-name">City Town</span></h2>
+          <p>City Town - это игра, где пользователь строит город, решает проблемы жителей и развивает страну через квесты.</p>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="content">
+          <p class="eyebrow">Slide 3</p>
+          <h2>Скриншоты приложения</h2>
+          <div class="screens">
+            <img src="playwright-desktop-ui-check.png" alt="Главный экран игры City Town" />
+            <img src="playwright-buildings-check.png" alt="Постройки города" />
+            <img src="playwright-mobile-ui-check.png" alt="Мобильный интерфейс" />
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="content">
+          <p class="eyebrow">Slide 4</p>
+          <h2>Video demo</h2>
+          <div class="video-frame">
+            <div>
+              <strong>Демо приложения</strong>
+              <span>Покажите: вход, выбор страны, строительство, квесты, AI-советника, настройки и leaderboard.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="content">
+          <p class="eyebrow">Slide 5</p>
+          <h2>Попробуйте приложение</h2>
+          <div class="cta-grid">
+            <div class="qr-card">
+              <img
+                src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=https%3A%2F%2Falmadi.vercel.app"
+                alt="QR code на приложение City Town"
+              />
+              <a href="https://almadi.vercel.app">almadi.vercel.app</a>
+            </div>
+            <p class="cta">Стройте свой город в City Town и докажите, что вы лучший мэр!</p>
+          </div>
+        </div>
+      </section>
+    </main>
+    <div class="slide-controls">
+      <button type="button" aria-label="Previous slide" data-prev>&lt;</button>
+      <div class="slide-counter" data-counter>1 / 5</div>
+      <button type="button" aria-label="Next slide" data-next>&gt;</button>
+    </div>
+    <div class="nav-note">Листайте вправо или используйте горизонтальный скролл</div>
+    <script>
+      const deck = document.querySelector('.deck');
+      const slides = Array.from(document.querySelectorAll('.slide'));
+      const counter = document.querySelector('[data-counter]');
+      const scrollToSlide = (index) => {
+        const slide = slides[Math.max(0, Math.min(index, slides.length - 1))];
+        slide.scrollIntoView({ behavior: 'smooth', inline: 'start' });
+      };
+      const getCurrentIndex = () => Math.round(deck.scrollLeft / window.innerWidth);
+      const updateCounter = () => {
+        counter.textContent = `${getCurrentIndex() + 1} / ${slides.length}`;
+      };
+
+      document.querySelector('[data-prev]').addEventListener('click', () => scrollToSlide(getCurrentIndex() - 1));
+      document.querySelector('[data-next]').addEventListener('click', () => scrollToSlide(getCurrentIndex() + 1));
+      deck.addEventListener('scroll', updateCounter, { passive: true });
+      window.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowRight') scrollToSlide(getCurrentIndex() + 1);
+        if (event.key === 'ArrowLeft') scrollToSlide(getCurrentIndex() - 1);
+      });
+    </script>
+  </body>
+</html>
