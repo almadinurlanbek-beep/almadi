@@ -4,6 +4,7 @@ import { isRoadCell, type MapTile } from './cityMap';
 import { createBasicBuilding } from './cityBasicBuildings3d';
 import { applyBuildingSkin, defaultBuildingSkins } from './buildingSkins';
 import { createBridges } from './cityBridges3d';
+import { createClimateScenery, getClimatePalette } from './cityClimate3d';
 import { addConstructionSites } from './cityConstruction3d';
 import { createFactory } from './cityFactory3d';
 import { cellSize, cityCenter, tileToPosition } from './cityGrid3d';
@@ -42,7 +43,8 @@ export const buildCityScene = (scene: THREE.Scene, tiles: MapTile[], stats: City
     railway: { active: false, trains: [] },
     trafficLights: [],
   };
-  scene.add(createGround(tiles));
+  scene.add(createGround(tiles, stats.countryId));
+  scene.add(createClimateScenery(stats));
   scene.add(createVegetation(tiles));
   scene.add(createBridges());
   addCityHall(scene);
@@ -56,18 +58,10 @@ export const buildCityScene = (scene: THREE.Scene, tiles: MapTile[], stats: City
   return entities;
 };
 
-const createGround = (tiles: MapTile[]) => {
+const createGround = (tiles: MapTile[], countryId: string) => {
   const group = new THREE.Group();
   const variants = ['lot', 'road', 'water', 'home', 'service', 'nature', 'work'] as const;
-  const colors: Record<(typeof variants)[number], number> = {
-    lot: 0xa9c69d,
-    road: 0x555d60,
-    water: 0x4ea8b5,
-    home: 0xd7c2a7,
-    service: 0xcdd6da,
-    nature: 0x79ad69,
-    work: 0xc8b990,
-  };
+  const colors = getClimatePalette(countryId);
   variants.forEach((variant) => {
     const matching = tiles.filter((tile) => tile.variant === variant);
     const mesh = new THREE.InstancedMesh(

@@ -20,15 +20,15 @@ const objectives: Record<HourlyQuestObjective, ObjectiveConfig> = {
 };
 
 const templates: Record<HourlyQuestObjective, { title: string; description: (target: number) => string; reward: number }> = {
-  population: { title: 'Рост района', description: (target) => `Доведи население до ${target}`, reward: 28000 },
-  happiness: { title: 'Довольные жители', description: (target) => `Подними счастье до ${target}%`, reward: 24000 },
-  health: { title: 'Здоровый город', description: (target) => `Подними здоровье до ${target}%`, reward: 24000 },
-  safety: { title: 'Спокойные улицы', description: (target) => `Подними безопасность до ${target}%`, reward: 26000 },
-  trust: { title: 'Доверие мэру', description: (target) => `Подними доверие до ${target}%`, reward: 26000 },
-  homes: { title: 'Новые дома', description: (target) => `Построй ${target} домов`, reward: 22000 },
-  schools: { title: 'Школьный квартал', description: (target) => `Построй ${target} школ`, reward: 30000 },
-  parks: { title: 'Больше зелени', description: (target) => `Построй ${target} парков`, reward: 26000 },
-  shops: { title: 'Местный бизнес', description: (target) => `Построй ${target} магазинов`, reward: 26000 },
+  population: { title: 'District growth', description: (target) => `Reach ${target} population`, reward: 28000 },
+  happiness: { title: 'Happy residents', description: (target) => `Raise happiness to ${target}%`, reward: 24000 },
+  health: { title: 'Healthy city', description: (target) => `Raise health to ${target}%`, reward: 24000 },
+  safety: { title: 'Calm streets', description: (target) => `Raise safety to ${target}%`, reward: 26000 },
+  trust: { title: 'Mayor trust', description: (target) => `Raise trust to ${target}%`, reward: 26000 },
+  homes: { title: 'New homes', description: (target) => `Build ${target} homes`, reward: 22000 },
+  schools: { title: 'School district', description: (target) => `Build ${target} schools`, reward: 30000 },
+  parks: { title: 'More green space', description: (target) => `Build ${target} parks`, reward: 26000 },
+  shops: { title: 'Local business', description: (target) => `Build ${target} shops`, reward: 26000 },
 };
 
 export type HourlyQuestStatus = HourlyQuest & {
@@ -63,7 +63,7 @@ export const claimHourlyQuestReward = (stats: CityStats, questId: string, now = 
     money: stats.money + status.reward,
     hourlyQuests: remaining,
     nextHourlyQuestAt: remaining.length === 0 ? now + HOUR_MS : stats.nextHourlyQuestAt,
-    news: [`Ежечасный квест выполнен: ${status.title}, +$${status.reward.toLocaleString('ru-RU')}.`, ...stats.news].slice(0, 7),
+    news: [`Hourly quest completed: ${status.title}, +$${status.reward.toLocaleString('ru-RU')}.`, ...stats.news].slice(0, 7),
   };
 };
 
@@ -72,8 +72,8 @@ export const getNextHourlyQuestText = (stats: CityStats, now = Date.now()) => {
   const seconds = Math.max(0, Math.ceil((stats.nextHourlyQuestAt - now) / 1000));
   const minutes = Math.floor(seconds / 60);
   const rest = seconds % 60;
-  if (minutes <= 0) return `${rest} сек.`;
-  return `${minutes} мин. ${rest.toString().padStart(2, '0')} сек.`;
+  if (minutes <= 0) return `${rest}s`;
+  return `${minutes}m ${rest.toString().padStart(2, '0')}s`;
 };
 
 const createHourlyQuests = (stats: CityStats, now: number) => {

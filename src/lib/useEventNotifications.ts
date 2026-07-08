@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import { playSound } from './soundSystem';
 import type { CityStats } from './gameTypes';
+import type { Language } from './i18n';
+import { getIncidentText } from './incidentTranslations';
+import { playSound } from './soundSystem';
 
 export type EventNotification = {
   id: string;
@@ -8,7 +10,7 @@ export type EventNotification = {
   text: string;
 };
 
-export const useEventNotifications = (stats: CityStats, enabled: boolean) => {
+export const useEventNotifications = (stats: CityStats, enabled: boolean, language: Language) => {
   const [notifications, setNotifications] = useState<EventNotification[]>([]);
   const initialized = useRef(false);
   const lastIncidentId = useRef<string | null>(null);
@@ -37,7 +39,7 @@ export const useEventNotifications = (stats: CityStats, enabled: boolean) => {
       lastNews.current = latestNews;
       pushNotification(setNotifications, {
         kind: 'warning',
-        text: stats.activeIncident.title,
+        text: getIncidentText(stats.activeIncident, language).title,
       });
       playSound('incident');
       return;
@@ -51,7 +53,7 @@ export const useEventNotifications = (stats: CityStats, enabled: boolean) => {
       pushNotification(setNotifications, { kind, text: latestNews });
       playSound(kind === 'success' ? 'success' : kind === 'warning' ? 'warning' : 'notify');
     }
-  }, [enabled, stats.activeIncident?.id, stats.news]);
+  }, [enabled, language, stats.activeIncident?.id, stats.news]);
 
   const dismissNotification = (id: string) => {
     setNotifications((current) => current.filter((notification) => notification.id !== id));
@@ -73,7 +75,7 @@ const pushNotification = (
 
 const getNotificationKind = (text: string): EventNotification['kind'] => {
   const lower = text.toLowerCase();
-  if (lower.includes('награда') || lower.includes('заверш') || lower.includes('получил')) return 'success';
-  if (lower.includes('происшествие') || lower.includes('упала') || lower.includes('обнулился')) return 'warning';
+  if (lower.includes('reward') || lower.includes('completed') || lower.includes('награда') || lower.includes('заверш') || lower.includes('получил') || lower.includes('выполнен')) return 'success';
+  if (lower.includes('incident') || lower.includes('danger') || lower.includes('происшествие') || lower.includes('упал') || lower.includes('упала') || lower.includes('опасно')) return 'warning';
   return 'info';
 };

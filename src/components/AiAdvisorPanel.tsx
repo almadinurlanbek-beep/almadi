@@ -1,31 +1,25 @@
-import { useState } from 'react';
-import { generateAiQuest, getAiQuestProgress, type AiQuest } from '../lib/aiQuests';
+import { useEffect, useState } from 'react';
+import { requestMayorAdvice } from '../lib/aiAdvisor';
 import type { CityStats } from '../lib/gameTypes';
 import { useLanguage } from '../lib/i18n';
 
 type Props = {
   stats: CityStats;
-  activeQuest: AiQuest | null;
-  onQuestReady: (quest: AiQuest) => void;
 };
 
-export function AiAdvisorPanel({ stats, activeQuest, onQuestReady }: Props) {
-  const { t } = useLanguage();
+export function AiAdvisorPanel({ stats }: Props) {
+  const { language, t } = useLanguage();
   const [advice, setAdvice] = useState(t('advisorStart'));
   const [loading, setLoading] = useState(false);
-  const activeProgress = activeQuest ? getAiQuestProgress(activeQuest, stats) : 0;
-  const isActiveQuestDone = activeQuest ? activeProgress >= activeQuest.target : false;
-  const buttonDisabled = loading || Boolean(activeQuest);
-  const shownAdvice = activeQuest ? getQuestAdvice(activeQuest, stats, t) : advice;
+
+  useEffect(() => {
+    setAdvice(t('advisorStart'));
+  }, [language, t]);
 
   const handleAsk = async () => {
-    if (activeQuest) return;
-
     setLoading(true);
     try {
-      const quest = await generateAiQuest(stats);
-      onQuestReady(quest);
-      setAdvice(getQuestAdvice(quest, stats, t));
+      setAdvice(await requestMayorAdvice(stats, language));
     } catch {
       setAdvice(t('advisorError'));
     } finally {
@@ -40,25 +34,11 @@ export function AiAdvisorPanel({ stats, activeQuest, onQuestReady }: Props) {
           <p className="eyebrow">{t('advisorEyebrow')}</p>
           <h3>{t('mayorAdvice')}</h3>
         </div>
-        <button type="button" className="secondary" disabled={buttonDisabled} onClick={handleAsk}>
-          {getButtonText(loading, activeQuest, isActiveQuestDone, t)}
+        <button type="button" className="secondary" disabled={loading} onClick={handleAsk}>
+          {loading ? t('thinking') : t('ask')}
         </button>
       </div>
-      <p>{shownAdvice}</p>
+      <p>{advice}</p>
     </section>
   );
 }
-
-const getButtonText = (loading: boolean, activeQuest: AiQuest | null, isActiveQuestDone: boolean, t: ReturnType<typeof useLanguage>['t']) => {
-  if (loading) return t('thinking');
-  if (!activeQuest) return t('ask');
-  return isActiveQuestDone ? t('claimReward') : t('completeTask');
-};
-
-const getQuestAdvice = (quest: AiQuest, stats: CityStats, t: ReturnType<typeof useLanguage>['t']) => {
-  const progress = getAiQuestProgress(quest, stats);
-  if (progress >= quest.target) {
-    return `${t('claimReward')}: ${quest.description}. ${progress}/${quest.target}.`;
-  }
-  return `${t('completeTask')}: ${quest.description}. ${progress}/${quest.target}.`;
-};

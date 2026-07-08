@@ -21,6 +21,14 @@ type CameraOrbit = {
   distance: number;
   height: number;
 };
+type TouchPoint = {
+  x: number;
+  y: number;
+};
+type TouchGesture = {
+  angle: number;
+  distance: number;
+};
 type Props = {
   stats: CityStats;
   tiles: MapTile[];
@@ -47,10 +55,11 @@ export function CityMap3D({ stats, tiles, questMarkers, onTileClick, onQuestMark
       positions: stats.buildingPositions,
       questMarkers: questMarkers.map((marker) => `${marker.id}:${marker.kind}:${marker.title}:${marker.x}:${marker.y}`),
       construction: stats.construction.map((job) => job.id),
+      countryId: stats.countryId,
       incident: stats.activeIncident?.id,
       responses: stats.incidentResponses.map((response) => response.method),
     }),
-    [questMarkers, stats.activeIncident?.id, stats.buildings, stats.buildingSkins, stats.buildingPositions, stats.construction, stats.incidentResponses],
+    [questMarkers, stats.activeIncident?.id, stats.buildings, stats.buildingSkins, stats.buildingPositions, stats.construction, stats.countryId, stats.incidentResponses],
   );
   useEffect(() => {
     minuteRef.current = stats.minuteOfDay;
@@ -85,7 +94,7 @@ export function CityMap3D({ stats, tiles, questMarkers, onTileClick, onQuestMark
       powerPreference: 'high-performance',
       preserveDrawingBuffer: navigator.userAgent.includes('HeadlessChrome'),
     });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.35));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.05));
     renderer.setSize(host.clientWidth, host.clientHeight);
     host.appendChild(renderer.domElement);
     const hemi = new THREE.HemisphereLight(0xf8fff7, 0x6f806b, initialLights.hemiIntensity);
@@ -110,6 +119,8 @@ export function CityMap3D({ stats, tiles, questMarkers, onTileClick, onQuestMark
       active: false,
       item: null,
     };
+    const touchPointers = new Map<number, TouchPoint>();
+    let touchGesture: TouchGesture | null = null;
     let dragPreview: BuildingDragPreview | null = null;
     let moved = false;
     const resize = () => {
@@ -119,7 +130,7 @@ export function CityMap3D({ stats, tiles, questMarkers, onTileClick, onQuestMark
     };
     let lastRenderMs = 0;
     const render = (timeMs: number) => {
-      if (timeMs - lastRenderMs < 33) {
+      if (timeMs - lastRenderMs < 42) {
         frame = requestAnimationFrame(render);
         return;
       }
@@ -132,6 +143,17 @@ export function CityMap3D({ stats, tiles, questMarkers, onTileClick, onQuestMark
       frame = requestAnimationFrame(render);
     };
     const onPointerDown = (event: PointerEvent) => {
+      if (event.pointerType === 'touch') {
+        touchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        if (touchPointers.size >= 2) {
+          touchGesture = getTouchGesture(touchPointers);
+          drag.active = true;
+          drag.mode = 'zoom';
+          moved = true;
+          renderer.domElement.setPointerCapture(event.pointerId);
+          return;
+        }
+      }
       if (event.button === 0) {
         const point = pickTileFromPointer(event, renderer.domElement, camera);
         const building = point ? dragStartRef.current(point) : null;
@@ -154,6 +176,22 @@ export function CityMap3D({ stats, tiles, questMarkers, onTileClick, onQuestMark
       renderer.domElement.setPointerCapture(event.pointerId);
     };
     const onPointerMove = (event: PointerEvent) => {
+      if (event.pointerType === 'touch' && touchPointers.has(event.pointerId)) {
+        touchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        if (touchPointers.size >= 2 && !buildingDrag.active) {
+          const nextGesture = getTouchGesture(touchPointers);
+          if (touchGesture && nextGesture) {
+            const distanceDelta = nextGesture.distance - touchGesture.distance;
+            const angleDelta = nextGesture.angle - touchGesture.angle;
+            orbitRef.current.distance = Math.max(10, Math.min(110, orbitRef.current.distance - distanceDelta * 0.07));
+            orbitRef.current.height = Math.max(12, Math.min(82, orbitRef.current.height - distanceDelta * 0.035));
+            orbitRef.current.yaw -= angleDelta * 0.7;
+          }
+          touchGesture = nextGesture;
+          moved = true;
+          return;
+        }
+      }
       if (buildingDrag.active) {
         const point = pickTileFromPointer(event, renderer.domElement, camera);
         if (point && dragPreview) updateBuildingDragPreview(dragPreview, point);
@@ -185,6 +223,10 @@ export function CityMap3D({ stats, tiles, questMarkers, onTileClick, onQuestMark
       orbitRef.current.height = Math.max(12, Math.min(82, orbitRef.current.height + event.deltaY * 0.018));
     };
     const stopDrag = (event: PointerEvent) => {
+      if (event.pointerType === 'touch') {
+        touchPointers.delete(event.pointerId);
+        if (touchPointers.size < 2) touchGesture = null;
+      }
       if (buildingDrag.active) {
         const point = pickTileFromPointer(event, renderer.domElement, camera);
         if (buildingDrag.item && point) dropRef.current(buildingDrag.item, point);
@@ -231,4 +273,14 @@ export function CityMap3D({ stats, tiles, questMarkers, onTileClick, onQuestMark
 
 const findQuestMarkerNear = (point: TilePoint, markers: QuestMapMarker[]) => {
   return markers.find((marker) => Math.max(Math.abs(marker.x - point.x), Math.abs(marker.y - point.y)) <= 2) ?? null;
+};
+
+const getTouchGesture = (pointers: Map<number, TouchPoint>): TouchGesture | null => {
+  const points = Array.from(pointers.values());
+  if (points.length < 2) return null;
+  const [first, second] = points;
+  return {
+    angle: Math.atan2(second.y - first.y, second.x - first.x),
+    distance: Math.hypot(second.x - first.x, second.y - first.y),
+  };
 };

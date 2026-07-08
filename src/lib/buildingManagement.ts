@@ -1,19 +1,20 @@
 import { buildings } from './gameData';
-import { alignBuildingPoint, canPlaceBuildingPoint, getOccupiedBuildingCells } from './cityBuildingPlacement';
+import { getOccupiedBuildingCells, getSafeBuildingPoint } from './cityBuildingPlacement';
 import { getConstructionTile } from './cityMap';
 import type { BuildingId, CityStats, TilePoint } from './gameTypes';
 
 export const refundBuilding = (stats: CityStats, buildingId: BuildingId, index: number) => {
   if (stats.buildings[buildingId] <= 0) return stats;
   const cost = buildings.find((building) => building.id === buildingId)?.cost ?? 0;
-  const positions = stats.buildingPositions[buildingId] ?? [];
+  const nextCount = Math.max(0, stats.buildings[buildingId] - 1);
+  const positions = compactPositions(stats.buildingPositions[buildingId] ?? [], nextCount, index);
   return {
     ...stats,
     money: stats.money + Math.round(cost * 0.5),
-    buildings: { ...stats.buildings, [buildingId]: Math.max(0, stats.buildings[buildingId] - 1) },
+    buildings: { ...stats.buildings, [buildingId]: nextCount },
     buildingPositions: {
       ...stats.buildingPositions,
-      [buildingId]: positions.filter((_, itemIndex) => itemIndex !== index),
+      [buildingId]: positions,
     },
   };
 };
@@ -22,8 +23,7 @@ export const moveBuilding = (stats: CityStats, buildingId: BuildingId, index: nu
   if (stats.buildings[buildingId] <= index) return stats;
   const positions = [...(stats.buildingPositions[buildingId] ?? [])];
   const occupied = getOccupiedBuildingCells(stats.buildingPositions, { buildingId, index });
-  if (!canPlaceBuildingPoint(buildingId, point, occupied)) return stats;
-  positions[index] = alignBuildingPoint(buildingId, { ...point, rotation: positions[index]?.rotation });
+  positions[index] = getSafeBuildingPoint(buildingId, index, { ...point, rotation: positions[index]?.rotation }, occupied);
   return {
     ...stats,
     buildingPositions: {
@@ -31,6 +31,16 @@ export const moveBuilding = (stats: CityStats, buildingId: BuildingId, index: nu
       [buildingId]: positions,
     },
   };
+};
+
+const compactPositions = (positions: TilePoint[], nextCount: number, removedIndex: number) => {
+  return positions
+    .filter((point, itemIndex) => itemIndex !== removedIndex && isTilePoint(point))
+    .slice(0, nextCount);
+};
+
+const isTilePoint = (point: TilePoint | null | undefined): point is TilePoint => {
+  return point !== null && point !== undefined && Number.isFinite(point.x) && Number.isFinite(point.y);
 };
 
 export const rotateBuilding = (stats: CityStats, buildingId: BuildingId, index: number, point: TilePoint) => {

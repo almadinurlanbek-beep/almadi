@@ -42,6 +42,7 @@ export type CityStats = {
   xp: number;
   taxRate: number;
   residentPayoutSeconds: number;
+  starterProtectionSeconds: number;
   happiness: number;
   health: number;
   safety: number;
@@ -86,10 +87,26 @@ export type IncomeBreakdown = {
 };
 
 export type Country = {
+  climate: CountryClimate;
   id: string;
   name: string;
   population: number;
+  rulerTitle: string;
 };
+
+export type CountryClimate =
+  | 'steppe-mountains'
+  | 'taiga-snow'
+  | 'desert-oasis'
+  | 'temperate-forest'
+  | 'tropical-forest'
+  | 'islands'
+  | 'savanna'
+  | 'monsoon'
+  | 'alpine'
+  | 'mediterranean'
+  | 'coastal-desert'
+  | 'northern-fjords';
 
 export type Incident = {
   id: string;

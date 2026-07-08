@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { BuildPanel } from './components/BuildPanel';
 import { AiAdvisorPanel } from './components/AiAdvisorPanel';
 import { CityHeader } from './components/CityHeader';
+import { CityDestroyedOverlay } from './components/CityDestroyedOverlay';
 import { CityMap } from './components/CityMap';
 import { CountryPanel } from './components/CountryPanel';
 import { DailyRewardPanel } from './components/DailyRewardPanel';
@@ -9,25 +10,34 @@ import { EventNotifications } from './components/EventNotifications';
 import { FriendsPanel } from './components/FriendsPanel';
 import { HappinessWarning } from './components/HappinessWarning';
 import { IncidentPanel } from './components/IncidentPanel';
+import { MoneyLeaderboardPanel } from './components/MoneyLeaderboardPanel';
+import { MobileQuickNav } from './components/MobileQuickNav';
 import { PlaytimeRewardPanel } from './components/PlaytimeRewardPanel';
 import { QuestPanel } from './components/QuestPanel';
+import { QuestRewardModal } from './components/QuestRewardModal';
+import { SettingsPanel } from './components/SettingsPanel';
 import { StartMenu } from './components/StartMenu';
 import { TaxPanel } from './components/TaxPanel';
+import { YouTubeMusicPlayer } from './components/YouTubeMusicPlayer';
 import { moveBuilding, refundBuilding, rotateBuilding } from './lib/buildingManagement';
 import { createInitialCity } from './lib/gameData';
 import { claimDailyReward, loadDailyRewardState } from './lib/dailyRewards';
 import { addPlaytimeSecond, claimPlaytimeReward, loadPlaytimeRewardState, type PlaytimeRewardId } from './lib/playtimeRewards';
-import { DEFEAT_HAPPINESS, HAPPINESS_WARNING_LIMIT, advanceTime, build, changeTax, resolveIncident } from './lib/gameLogic';
+import { DEFEAT_HAPPINESS, advanceTime, build, changeTax, resolveIncident } from './lib/gameLogic';
 import { loadFriendSavedCities, loadSavedCities, loadUserSavedCities, saveCities, saveUserCities } from './lib/citySaves';
 import { acceptFriend, loadFriends, requestFriend, upsertProfile, type FriendItem, type FriendRequestResult } from './lib/friends';
-import { playSound, startAudio } from './lib/soundSystem';
+import { loadGameSettings, saveGameSettings, type GameSettings } from './lib/gameSettings';
+import { applyAudioSettings, playSound, startAudio } from './lib/soundSystem';
 import { supabase } from './lib/supabase';
 import { useEventNotifications } from './lib/useEventNotifications';
 import { completeAiQuest, generateAiQuest, getAiQuestProgress, type AiQuest } from './lib/aiQuests';
 import { claimHourlyQuestReward, ensureHourlyQuests, getHourlyQuestStatuses } from './lib/hourlyQuests';
+import { loadMoneyLeaderboard, saveMoneyLeaderboard, type MoneyLeaderboardItem } from './lib/moneyLeaderboard';
 import { createQuestMapMarkers } from './lib/questMapMarkers';
+import { getQuestTitle } from './lib/questTranslations';
+import { getSelectedQuest } from './lib/questSelection';
 import { claimQuestReward, getQuestStatuses } from './lib/quests';
-import { useLanguage } from './lib/i18n';
+import { useLanguage, type Language } from './lib/i18n';
 import type { BuildingId, CityStats, ResponseMethod, TilePoint } from './lib/gameTypes';
 import type { Session } from '@supabase/supabase-js';
 
@@ -37,22 +47,121 @@ type FriendCityView = {
   friend: FriendItem;
 };
 
-const getFriendRequestMessage = (result: FriendRequestResult) => {
-  if (result === 'sent') return 'Заявка отправлена. Друг должен принять её у себя.';
-  if (result === 'accepted') return 'Входящая заявка найдена и принята. Можно смотреть город друга.';
-  if (result === 'already_friends') return 'Этот игрок уже у тебя в друзьях.';
-  if (result === 'already_sent') return 'Заявка уже отправлена. Подожди, пока друг её примет.';
-  if (result === 'self') return 'Себя добавить нельзя. Нужен email другого игрока.';
-  return 'Игрок с таким email не найден. Друг должен хотя бы раз войти в игру.';
+type StatusWarning = {
+  advice: string;
+  key: 'happiness' | 'safety' | 'trust';
+  label: string;
+  resetLimit: number;
+  value: number;
 };
 
+const STATUS_WARNING_LIMIT = 45;
+const DEFEAT_SAFETY_LIMIT = 40;
+const DEFEAT_TRUST_LIMIT = 39;
+
+const getFriendRequestMessage = (result: FriendRequestResult) => {
+  if (result === 'sent') return 'Р—Р°СЏРІРєР° РѕС‚РїСЂР°РІР»РµРЅР°. Р”СЂСѓРі РґРѕР»Р¶РµРЅ РїСЂРёРЅСЏС‚СЊ РµС‘ Сѓ СЃРµР±СЏ.';
+  if (result === 'accepted') return 'Р’С…РѕРґСЏС‰Р°СЏ Р·Р°СЏРІРєР° РЅР°Р№РґРµРЅР° Рё РїСЂРёРЅСЏС‚Р°. РњРѕР¶РЅРѕ СЃРјРѕС‚СЂРµС‚СЊ РіРѕСЂРѕРґ РґСЂСѓРіР°.';
+  if (result === 'already_friends') return 'Р­С‚РѕС‚ РёРіСЂРѕРє СѓР¶Рµ Сѓ С‚РµР±СЏ РІ РґСЂСѓР·СЊСЏС….';
+  if (result === 'already_sent') return 'Р—Р°СЏРІРєР° СѓР¶Рµ РѕС‚РїСЂР°РІР»РµРЅР°. РџРѕРґРѕР¶РґРё, РїРѕРєР° РґСЂСѓРі РµС‘ РїСЂРёРјРµС‚.';
+  if (result === 'self') return 'РЎРµР±СЏ РґРѕР±Р°РІРёС‚СЊ РЅРµР»СЊР·СЏ. РќСѓР¶РµРЅ email РґСЂСѓРіРѕРіРѕ РёРіСЂРѕРєР°.';
+  return 'РРіСЂРѕРє СЃ С‚Р°РєРёРј email РЅРµ РЅР°Р№РґРµРЅ. Р”СЂСѓРі РґРѕР»Р¶РµРЅ С…РѕС‚СЏ Р±С‹ СЂР°Р· РІРѕР№С‚Рё РІ РёРіСЂСѓ.';
+};
+
+const getStatusWarning = (stats: CityStats, dismissed: StatusWarning['key'][], language: Language): StatusWarning | null => {
+  const text = statusWarningText[language];
+  const warnings: StatusWarning[] = [
+    {
+      advice: text.happinessAdvice,
+      key: 'happiness',
+      label: text.happiness,
+      resetLimit: DEFEAT_HAPPINESS,
+      value: stats.happiness,
+    },
+    {
+      advice: text.safetyAdvice,
+      key: 'safety',
+      label: text.safety,
+      resetLimit: DEFEAT_SAFETY_LIMIT,
+      value: stats.safety,
+    },
+    {
+      advice: text.trustAdvice,
+      key: 'trust',
+      label: text.trust,
+      resetLimit: DEFEAT_TRUST_LIMIT,
+      value: stats.trust,
+    },
+  ];
+  return warnings.find((warning) => warning.value < STATUS_WARNING_LIMIT && !dismissed.includes(warning.key)) ?? null;
+};
+const getStatusValue = (stats: CityStats, key: StatusWarning['key']) => {
+  if (key === 'happiness') return stats.happiness;
+  if (key === 'safety') return stats.safety;
+  return stats.trust;
+};
+
+const getDestroyedReason = (stats: CityStats, language: Language) => {
+  const text = destroyedText[language];
+  if (stats.happiness < DEFEAT_HAPPINESS) return text.happiness(stats.happiness);
+  if (stats.safety < DEFEAT_SAFETY_LIMIT) return text.safety(stats.safety);
+  return null;
+};
+
+const statusWarningText: Record<Language, {
+  happiness: string;
+  happinessAdvice: string;
+  safety: string;
+  safetyAdvice: string;
+  trust: string;
+  trustAdvice: string;
+}> = {
+  ru: {
+    happiness: 'Счастье',
+    happinessAdvice: 'Построй парк, школу или магазин, а ещё попробуй снизить налог.',
+    safety: 'Безопасность',
+    safetyAdvice: 'Построй полицию или пожарную часть, чтобы жители чувствовали себя спокойнее.',
+    trust: 'Доверие',
+    trustAdvice: 'Снизь налог, выполняй квесты и развивай важные службы города.',
+  },
+  en: {
+    happiness: 'Happiness',
+    happinessAdvice: 'Build a park, school, or shop, and try lowering taxes.',
+    safety: 'Safety',
+    safetyAdvice: 'Build police or a fire station so residents feel safer.',
+    trust: 'Trust',
+    trustAdvice: 'Lower taxes, complete quests, and improve important city services.',
+  },
+  kk: {
+    happiness: 'Бақыт',
+    happinessAdvice: 'Саябақ, мектеп немесе дүкен сал, салықты да төмендетіп көр.',
+    safety: 'Қауіпсіздік',
+    safetyAdvice: 'Тұрғындар тыныш сезінуі үшін полиция немесе өрт сөндіру бөлімін сал.',
+    trust: 'Сенім',
+    trustAdvice: 'Салықты төмендет, квесттерді орында және маңызды қалалық қызметтерді дамыт.',
+  },
+};
+
+const destroyedText: Record<Language, { happiness: (value: number) => string; safety: (value: number) => string }> = {
+  ru: {
+    happiness: (value) => `Счастье упало до ${value}%. Жители больше не поддерживают мэра.`,
+    safety: (value) => `Безопасность упала до ${value}%. На улицах стало слишком опасно.`,
+  },
+  en: {
+    happiness: (value) => `Happiness fell to ${value}%. Residents no longer support the mayor.`,
+    safety: (value) => `Safety fell to ${value}%. The streets became too dangerous.`,
+  },
+  kk: {
+    happiness: (value) => `Бақыт ${value}%-ға түсті. Тұрғындар әкімді енді қолдамайды.`,
+    safety: (value) => `Қауіпсіздік ${value}%-ға түсті. Көшелер тым қауіпті болды.`,
+  },
+};
 export default function App() {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const [savedGame] = useState(loadSavedCities);
   const [countryId, setCountryId] = useState(savedGame.countryId);
   const [cities, setCities] = useState<Record<string, CityStats>>(savedGame.cities);
   const [screen, setScreen] = useState<'menu' | 'starting' | 'playing'>('menu');
-  const [reward, setReward] = useState(150);
   const [dailyReward, setDailyReward] = useState(loadDailyRewardState);
   const [playtimeReward, setPlaytimeReward] = useState(loadPlaytimeRewardState);
   const [responders, setResponders] = useState(1);
@@ -67,19 +176,31 @@ export default function App() {
   const [aiQuest, setAiQuest] = useState<AiQuest | null>(null);
   const [aiQuestLoading, setAiQuestLoading] = useState(false);
   const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null);
-  const [isHappinessWarningOpen, setIsHappinessWarningOpen] = useState(false);
-  const [isHappinessWarningDismissed, setIsHappinessWarningDismissed] = useState(false);
+  const [isQuestRewardOpen, setIsQuestRewardOpen] = useState(false);
+  const [statusWarning, setStatusWarning] = useState<StatusWarning | null>(null);
+  const [dismissedStatusWarnings, setDismissedStatusWarnings] = useState<StatusWarning['key'][]>([]);
+  const [settings, setSettings] = useState(loadGameSettings);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [leaderboard, setLeaderboard] = useState<MoneyLeaderboardItem[]>([]);
   const stats = cities[countryId] ?? createInitialCity(countryId);
+  const destroyedReason = getDestroyedReason(stats, language);
   const viewedStats = friendView ? friendView.cities[friendView.countryId] ?? createInitialCity(friendView.countryId) : stats;
-  const eventNotifications = useEventNotifications(stats, screen === 'playing' && !friendView);
+  const eventNotifications = useEventNotifications(stats, screen === 'playing' && !friendView, language);
+  const selectedMapQuest = getSelectedQuest(
+    selectedQuestId,
+    aiQuest,
+    stats,
+    getQuestStatuses(stats).filter((quest) => !quest.claimed),
+    getHourlyQuestStatuses(stats),
+  );
   const questMarkers = useMemo(() => {
     const mayor = getQuestStatuses(stats)
       .filter((quest) => !quest.claimed)
-      .map((quest) => ({ id: quest.id, kind: 'mayor' as const, title: quest.title, completed: quest.completed }));
-    const hourly = getHourlyQuestStatuses(stats).map((quest) => ({ id: quest.id, kind: 'hourly' as const, title: quest.title, completed: quest.completed }));
+      .map((quest) => ({ id: quest.id, kind: 'mayor' as const, title: getQuestTitle(quest, 'mayor', language), completed: quest.completed }));
+    const hourly = getHourlyQuestStatuses(stats).map((quest) => ({ id: quest.id, kind: 'hourly' as const, title: getQuestTitle(quest, 'hourly', language), completed: quest.completed }));
     const ai = aiQuest ? [{ id: aiQuest.id, kind: 'ai' as const, title: aiQuest.title, completed: getAiQuestProgress(aiQuest, stats) >= aiQuest.target }] : [];
     return createQuestMapMarkers([...ai, ...hourly, ...mayor]);
-  }, [aiQuest, stats]);
+  }, [aiQuest, language, stats]);
 
   const updateCity = (change: (current: CityStats) => CityStats) => {
     setCities((current) => ({
@@ -101,7 +222,7 @@ export default function App() {
     updateCity((current) => ({
       ...current,
       money: current.money + result.amount,
-      news: [`Ежедневная награда: день ${result.day}, +$${result.amount.toLocaleString('ru-RU')}.`, ...current.news].slice(0, 7),
+      news: [`Р•Р¶РµРґРЅРµРІРЅР°СЏ РЅР°РіСЂР°РґР°: РґРµРЅСЊ ${result.day}, +$${result.amount.toLocaleString('ru-RU')}.`, ...current.news].slice(0, 7),
     }));
   };
 
@@ -113,7 +234,7 @@ export default function App() {
     updateCity((current) => ({
       ...current,
       money: current.money + result.amount,
-      news: [`Бесплатная награда: ${result.label}, +$${result.amount.toLocaleString('ru-RU')}.`, ...current.news].slice(0, 7),
+      news: [`Р‘РµСЃРїР»Р°С‚РЅР°СЏ РЅР°РіСЂР°РґР°: ${result.label}, +$${result.amount.toLocaleString('ru-RU')}.`, ...current.news].slice(0, 7),
     }));
   };
 
@@ -121,60 +242,73 @@ export default function App() {
     playSound('success');
     updateCity((current) => claimQuestReward(current, questId));
     setSelectedQuestId(null);
+    setIsQuestRewardOpen(false);
   };
 
   const handleHourlyQuestClaim = (questId: string) => {
     playSound('success');
     updateCity((current) => claimHourlyQuestReward(current, questId));
     setSelectedQuestId(null);
+    setIsQuestRewardOpen(false);
   };
 
   const handleGenerateAiQuest = async () => {
     setAiQuestLoading(true);
     try {
-      const quest = await generateAiQuest(stats);
+      const quest = await generateAiQuest(stats, language);
       playSound('click');
       setAiQuest(quest);
       setSelectedQuestId(quest.id);
     } catch (error) {
       console.error(error);
-      const message = error instanceof Error ? error.message : 'неизвестная ошибка';
+      const message = error instanceof Error ? error.message : 'РЅРµРёР·РІРµСЃС‚РЅР°СЏ РѕС€РёР±РєР°';
       updateCity((current) => ({
         ...current,
-        news: [`ИИ сейчас не смог придумать задание: ${message}`, ...current.news].slice(0, 7),
+        news: [`РР СЃРµР№С‡Р°СЃ РЅРµ СЃРјРѕРі РїСЂРёРґСѓРјР°С‚СЊ Р·Р°РґР°РЅРёРµ: ${message}`, ...current.news].slice(0, 7),
       }));
     } finally {
       setAiQuestLoading(false);
     }
   };
 
-  const handleAdvisorQuestReady = (quest: AiQuest) => {
-    playSound('click');
-    setAiQuest(quest);
-    setSelectedQuestId(quest.id);
-  };
-
-  const handleAiQuestClaim = async () => {
+  const handleAiQuestClaim = async (openNextQuest = true) => {
     if (!aiQuest || getAiQuestProgress(aiQuest, stats) < aiQuest.target) return;
     playSound('success');
     const completedStats = completeAiQuest(stats, aiQuest);
     setAiQuest(null);
     updateCity(() => completedStats);
+    if (!openNextQuest) setIsQuestRewardOpen(false);
     setAiQuestLoading(true);
     try {
-      const nextQuest = await generateAiQuest(completedStats);
+      const nextQuest = await generateAiQuest(completedStats, language);
       setAiQuest(nextQuest);
-      setSelectedQuestId(nextQuest.id);
+      if (openNextQuest) setSelectedQuestId(nextQuest.id);
     } catch (error) {
       console.error(error);
-      const message = error instanceof Error ? error.message : 'неизвестная ошибка';
+      const message = error instanceof Error ? error.message : 'РЅРµРёР·РІРµСЃС‚РЅР°СЏ РѕС€РёР±РєР°';
       updateCity((current) => ({
         ...current,
-        news: [`ИИ не смог придумать новый квест: ${message}`, ...current.news].slice(0, 7),
+        news: [`РР РЅРµ СЃРјРѕРі РїСЂРёРґСѓРјР°С‚СЊ РЅРѕРІС‹Р№ РєРІРµСЃС‚: ${message}`, ...current.news].slice(0, 7),
       }));
     } finally {
       setAiQuestLoading(false);
     }
+  };
+
+  const handleQuestMarkerClick = (questId: string) => {
+    setSelectedQuestId(questId);
+    setIsQuestRewardOpen(true);
+  };
+
+  const handleMapQuestClaim = async () => {
+    if (!selectedMapQuest?.quest.completed) return;
+    if (selectedMapQuest.kind === 'ai') {
+      setSelectedQuestId(null);
+      await handleAiQuestClaim(false);
+      return;
+    }
+    if (selectedMapQuest.kind === 'hourly') handleHourlyQuestClaim(selectedMapQuest.quest.id);
+    if (selectedMapQuest.kind === 'mayor') handleQuestClaim(selectedMapQuest.quest.id);
   };
 
   const handleTaxChange = (delta: number) => {
@@ -219,6 +353,22 @@ export default function App() {
     window.setTimeout(() => setScreen('playing'), 1300);
   };
 
+  const handleRestartCity = () => {
+    const freshCity = createInitialCity(countryId);
+    setCities((current) => ({ ...current, [countryId]: freshCity }));
+    setAiQuest(null);
+    setSelectedQuestId(null);
+    setIsQuestRewardOpen(false);
+    setStatusWarning(null);
+    setDismissedStatusWarnings([]);
+    setFriendView(null);
+  };
+
+  const handleSettingsChange = (nextSettings: GameSettings) => {
+    setSettings(nextSettings);
+    saveGameSettings(nextSettings);
+  };
+
   const handleGoogleSignIn = async () => {
     setAuthLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
@@ -238,7 +388,16 @@ export default function App() {
     setFriends([]);
     setFriendMessage(null);
     setFriendLoading(false);
+    setLeaderboard([]);
     await supabase.auth.signOut();
+  };
+
+  const refreshLeaderboard = async () => {
+    try {
+      setLeaderboard(await loadMoneyLeaderboard());
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const refreshFriends = async (userId: string) => {
@@ -257,7 +416,7 @@ export default function App() {
       setFriendMessage(getFriendRequestMessage(result));
     } catch (error) {
       console.error(error);
-      setFriendMessage('Не получилось добавить друга. Проверь email или попробуй позже.');
+      setFriendMessage('РќРµ РїРѕР»СѓС‡РёР»РѕСЃСЊ РґРѕР±Р°РІРёС‚СЊ РґСЂСѓРіР°. РџСЂРѕРІРµСЂСЊ email РёР»Рё РїРѕРїСЂРѕР±СѓР№ РїРѕР·Р¶Рµ.');
     } finally {
       setFriendLoading(false);
     }
@@ -271,10 +430,10 @@ export default function App() {
     try {
       await acceptFriend(friendshipId);
       await refreshFriends(userId);
-      setFriendMessage('Заявка принята. Теперь можно смотреть город друга.');
+      setFriendMessage('Р—Р°СЏРІРєР° РїСЂРёРЅСЏС‚Р°. РўРµРїРµСЂСЊ РјРѕР¶РЅРѕ СЃРјРѕС‚СЂРµС‚СЊ РіРѕСЂРѕРґ РґСЂСѓРіР°.');
     } catch (error) {
       console.error(error);
-      setFriendMessage('Не получилось принять заявку. Попробуй позже.');
+      setFriendMessage('РќРµ РїРѕР»СѓС‡РёР»РѕСЃСЊ РїСЂРёРЅСЏС‚СЊ Р·Р°СЏРІРєСѓ. РџРѕРїСЂРѕР±СѓР№ РїРѕР·Р¶Рµ.');
     } finally {
       setFriendLoading(false);
     }
@@ -286,14 +445,14 @@ export default function App() {
     try {
       const saved = await loadFriendSavedCities(friend.userId);
       if (!saved) {
-        setFriendMessage('У друга пока нет сохранённого города.');
+        setFriendMessage('РЈ РґСЂСѓРіР° РїРѕРєР° РЅРµС‚ СЃРѕС…СЂР°РЅС‘РЅРЅРѕРіРѕ РіРѕСЂРѕРґР°.');
         return;
       }
       setFriendView({ ...saved, friend });
       setIsFriendsOpen(false);
     } catch (error) {
       console.error(error);
-      setFriendMessage('Не получилось открыть город друга. Возможно, миграции ещё не применены.');
+      setFriendMessage('РќРµ РїРѕР»СѓС‡РёР»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ РіРѕСЂРѕРґ РґСЂСѓРіР°. Р’РѕР·РјРѕР¶РЅРѕ, РјРёРіСЂР°С†РёРё РµС‰С‘ РЅРµ РїСЂРёРјРµРЅРµРЅС‹.');
     } finally {
       setFriendLoading(false);
     }
@@ -336,6 +495,7 @@ export default function App() {
           saveUserCities(countryId, cities).catch((error: unknown) => console.error(error));
         }
         refreshFriends(session.user.id).catch((error: unknown) => console.error(error));
+        refreshLeaderboard().catch((error: unknown) => console.error(error));
         setCloudReady(true);
       })
       .catch((error: unknown) => console.error(error))
@@ -353,7 +513,12 @@ export default function App() {
     if (!session?.user || !cloudReady) return undefined;
 
     const timerId = window.setTimeout(() => {
-      saveUserCities(countryId, cities).catch((error: unknown) => console.error(error));
+      Promise.all([
+        saveUserCities(countryId, cities),
+        saveMoneyLeaderboard(session, countryId, cities),
+      ])
+        .then(() => refreshLeaderboard())
+        .catch((error: unknown) => console.error(error));
     }, 800);
 
     return () => window.clearTimeout(timerId);
@@ -361,16 +526,21 @@ export default function App() {
 
   useEffect(() => {
     if (screen !== 'playing') return;
-    if (stats.happiness >= HAPPINESS_WARNING_LIMIT) {
-      setIsHappinessWarningDismissed(false);
-      setIsHappinessWarningOpen(false);
+    if (destroyedReason) {
+      setStatusWarning(null);
       return;
     }
-    if (!isHappinessWarningDismissed) setIsHappinessWarningOpen(true);
-  }, [isHappinessWarningDismissed, screen, stats.happiness]);
+    const warning = getStatusWarning(stats, dismissedStatusWarnings, language);
+    setStatusWarning(warning);
+    setDismissedStatusWarnings((current) => {
+      const next = current.filter((key) => getStatusValue(stats, key) < STATUS_WARNING_LIMIT);
+      return next.length === current.length ? current : next;
+    });
+  }, [destroyedReason, dismissedStatusWarnings, screen, language, stats.happiness, stats.safety, stats.trust]);
 
   useEffect(() => {
     if (screen !== 'playing') return undefined;
+    if (destroyedReason) return undefined;
     const timerId = window.setInterval(() => {
       setPlaytimeReward((current) => addPlaytimeSecond(current));
       setCities((current) => ({
@@ -380,30 +550,52 @@ export default function App() {
     }, 1000);
 
     return () => window.clearInterval(timerId);
-  }, [countryId, screen]);
+  }, [countryId, destroyedReason, screen]);
+
+  useEffect(() => {
+    applyAudioSettings(settings);
+    document.body.dataset.colorTheme = settings.colorTheme;
+    document.body.dataset.deviceMode = settings.deviceMode;
+    document.body.dataset.wallpaper = settings.wallpaper;
+  }, [settings]);
 
   return (
     <>
       {screen !== 'playing' && (
         <StartMenu
           authLoading={authLoading}
+          deviceMode={settings.deviceMode}
           isSignedIn={Boolean(session?.user)}
           leaving={screen === 'starting'}
           userName={session?.user.email ?? null}
+          onDeviceModeChange={(deviceMode) => handleSettingsChange({ ...settings, deviceMode })}
           onGoogleSignIn={handleGoogleSignIn}
           onSignOut={handleSignOut}
           onStart={handleStart}
         />
       )}
-      <main className={`game ${screen === 'playing' ? 'visible' : 'behind-menu'}`}>
+      <main className={`game device-${settings.deviceMode} ${screen === 'playing' ? 'visible' : 'behind-menu'}`}>
         <EventNotifications notifications={eventNotifications.notifications} onDismiss={eventNotifications.dismissNotification} />
-        {isHappinessWarningOpen && (
+        <YouTubeMusicPlayer url={settings.youtubeMusicUrl} />
+        {destroyedReason && <CityDestroyedOverlay reason={destroyedReason} onRestart={handleRestartCity} />}
+        {selectedMapQuest && isQuestRewardOpen && !destroyedReason && !friendView && (
+          <QuestRewardModal
+            selected={selectedMapQuest}
+            onClaim={handleMapQuestClaim}
+            onClose={() => setIsQuestRewardOpen(false)}
+          />
+        )}
+        {statusWarning && (
           <HappinessWarning
-            happiness={stats.happiness}
-            resetLimit={DEFEAT_HAPPINESS}
+            advice={statusWarning.advice}
+            label={statusWarning.label}
+            resetLimit={statusWarning.resetLimit}
+            value={statusWarning.value}
             onClose={() => {
-              setIsHappinessWarningOpen(false);
-              setIsHappinessWarningDismissed(true);
+              setDismissedStatusWarnings((current) => (
+                current.includes(statusWarning.key) ? current : [...current, statusWarning.key]
+              ));
+              setStatusWarning(null);
             }}
           />
         )}
@@ -411,7 +603,15 @@ export default function App() {
           friendCount={friends.filter((friend) => friend.status === 'accepted').length}
           stats={viewedStats}
           onOpenFriends={() => setIsFriendsOpen(true)}
+          onOpenSettings={() => setIsSettingsOpen(true)}
         />
+        {isSettingsOpen && (
+          <SettingsPanel
+            settings={settings}
+            onChange={handleSettingsChange}
+            onClose={() => setIsSettingsOpen(false)}
+          />
+        )}
         {isFriendsOpen && (
           <div className="friends-modal-backdrop">
             <div className="friends-modal">
@@ -455,31 +655,28 @@ export default function App() {
               questMarkers={questMarkers}
               stats={viewedStats}
               onDeleteBuilding={handleDeleteBuilding}
-              onQuestMarkerClick={setSelectedQuestId}
+              onQuestMarkerClick={handleQuestMarkerClick}
               onMoveBuilding={handleMoveBuilding}
               onRotateBuilding={handleRotateBuilding}
             />
             {!friendView && (
               <IncidentPanel
                 stats={stats}
-                reward={reward}
                 responders={responders}
-                onRewardChange={setReward}
                 onRespondersChange={setResponders}
                 onResolve={handleResolve}
               />
             )}
           </div>
           <div className="right">
-            <FriendsPanel
-              friends={friends}
-              loading={friendLoading}
-              message={friendMessage}
-              onAccept={handleAcceptFriend}
-              onAdd={handleAddFriend}
-              onViewCity={handleViewFriendCity}
-            />
-            {!friendView && <AiAdvisorPanel stats={stats} activeQuest={aiQuest} onQuestReady={handleAdvisorQuestReady} />}
+            {!friendView && <BuildPanel stats={stats} onBuild={handleBuild} />}
+            {!friendView && <AiAdvisorPanel stats={stats} />}
+            {!friendView && (
+              <MoneyLeaderboardPanel
+                currentUserId={session?.user.id ?? null}
+                items={leaderboard}
+              />
+            )}
             {!friendView && (
               <QuestPanel
                 aiQuest={aiQuest}
@@ -494,9 +691,17 @@ export default function App() {
             )}
             {!friendView && <DailyRewardPanel reward={dailyReward} onClaim={handleDailyReward} />}
             {!friendView && <PlaytimeRewardPanel reward={playtimeReward} onClaim={handlePlaytimeReward} />}
-            {!friendView && <BuildPanel stats={stats} onBuild={handleBuild} />}
+            <FriendsPanel
+              friends={friends}
+              loading={friendLoading}
+              message={friendMessage}
+              onAccept={handleAcceptFriend}
+              onAdd={handleAddFriend}
+              onViewCity={handleViewFriendCity}
+            />
           </div>
         </div>
+        {!friendView && <MobileQuickNav />}
       </main>
     </>
   );

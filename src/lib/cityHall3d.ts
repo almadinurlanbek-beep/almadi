@@ -1,66 +1,117 @@
 import * as THREE from 'three';
 import { tileToPosition } from './cityGrid3d';
 
-const cityHallScale = 1.35;
+const cityHallScale = 1.78;
 
 export const addCityHall = (scene: THREE.Scene) => {
   const hall = new THREE.Group();
   const base = new THREE.Mesh(
-    new THREE.BoxGeometry(4.2, 2.4, 3.2),
-    new THREE.MeshLambertMaterial({ color: 0xd8c7a2 }),
+    new THREE.BoxGeometry(5.6, 2.8, 3.8),
+    new THREE.MeshLambertMaterial({ color: 0xe2d2ad }),
+  );
+  const leftWing = new THREE.Mesh(
+    new THREE.BoxGeometry(2.2, 2.15, 3.2),
+    new THREE.MeshLambertMaterial({ color: 0xd3bc8d }),
+  );
+  const rightWing = leftWing.clone();
+  const roof = new THREE.Mesh(
+    new THREE.BoxGeometry(6.05, 0.42, 4.2),
+    new THREE.MeshLambertMaterial({ color: 0x6b4f4a }),
+  );
+  const pediment = new THREE.Mesh(
+    new THREE.ConeGeometry(1.72, 1.15, 3),
+    new THREE.MeshLambertMaterial({ color: 0xf0e1bd }),
   );
   const tower = new THREE.Mesh(
-    new THREE.BoxGeometry(1.2, 3.8, 1.2),
-    new THREE.MeshLambertMaterial({ color: 0xc6ad7b }),
+    new THREE.BoxGeometry(1.45, 4.7, 1.45),
+    new THREE.MeshLambertMaterial({ color: 0xcdb47d }),
   );
   const dome = new THREE.Mesh(
-    new THREE.SphereGeometry(0.78, 16, 8),
-    new THREE.MeshLambertMaterial({ color: 0x5f8a7b }),
+    new THREE.SphereGeometry(0.98, 20, 10),
+    new THREE.MeshLambertMaterial({ color: 0x4f8f84 }),
   );
   const stairs = new THREE.Mesh(
-    new THREE.BoxGeometry(4.8, 0.28, 1.1),
+    new THREE.BoxGeometry(6.2, 0.32, 1.35),
     new THREE.MeshLambertMaterial({ color: 0xb8aa91 }),
   );
-  base.position.y = 1.2;
-  tower.position.y = 3.1;
-  dome.position.y = 5.05;
-  stairs.position.set(0, 0.18, -1.95);
-  hall.add(createGrounds(), base, tower, dome, stairs, createColumns(), createFlag(), createFence(), createOfficialCars());
+  base.position.y = 1.4;
+  leftWing.position.set(-3.75, 1.08, 0.25);
+  rightWing.position.set(3.75, 1.08, 0.25);
+  roof.position.y = 2.98;
+  pediment.position.set(0, 3.48, -2.04);
+  pediment.rotation.y = Math.PI / 2;
+  tower.position.y = 4.0;
+  dome.position.y = 6.75;
+  stairs.position.set(0, 0.2, -2.34);
+  hall.add(createGrounds(), base, leftWing, rightWing, roof, pediment, tower, dome, stairs, createColumns(), createWindows(), createClock(), createFlag(), createFence(), createOfficialCars());
   hall.scale.setScalar(cityHallScale);
-  hall.position.copy(tileToPosition(49, 39, 0.08));
+  hall.position.copy(tileToPosition(47, 39, 0.08));
   scene.add(hall);
 };
 
 const createGrounds = () => {
   const group = new THREE.Group();
-  const courtyard = new THREE.Mesh(new THREE.BoxGeometry(8.8, 0.06, 7.2), new THREE.MeshLambertMaterial({ color: 0xc7c0aa }));
-  const path = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.08, 3.7), new THREE.MeshLambertMaterial({ color: 0xb5ad96 }));
-  const lawnA = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.07, 1.4), new THREE.MeshLambertMaterial({ color: 0x6fa45f }));
+  const courtyard = new THREE.Mesh(new THREE.BoxGeometry(11.2, 0.06, 8.8), new THREE.MeshLambertMaterial({ color: 0xcac1a7 }));
+  const path = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 4.7), new THREE.MeshLambertMaterial({ color: 0xb5ad96 }));
+  const fountain = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.84, 0.18, 20), new THREE.MeshLambertMaterial({ color: 0x8aa5a8 }));
+  const water = new THREE.Mesh(new THREE.CylinderGeometry(0.58, 0.58, 0.04, 20), new THREE.MeshLambertMaterial({ color: 0x4ea8b5 }));
+  const lawnA = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.07, 1.7), new THREE.MeshLambertMaterial({ color: 0x6fa45f }));
   const lawnB = lawnA.clone();
-  path.position.set(0, 0.06, -3.05);
-  lawnA.position.set(-2.8, 0.08, -2.7);
-  lawnB.position.set(2.8, 0.08, -2.7);
-  group.add(courtyard, path, lawnA, lawnB);
+  path.position.set(0, 0.06, -3.55);
+  fountain.position.set(0, 0.18, -3.2);
+  water.position.set(0, 0.3, -3.2);
+  lawnA.position.set(-3.45, 0.08, -3.25);
+  lawnB.position.set(3.45, 0.08, -3.25);
+  group.add(courtyard, path, fountain, water, lawnA, lawnB);
   return group;
 };
 
 const createColumns = () => {
   const columns = new THREE.Group();
   const material = new THREE.MeshLambertMaterial({ color: 0xf0e6cf });
-  for (let index = 0; index < 5; index += 1) {
-    const column = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 1.6, 12), material);
-    column.position.set(-1.6 + index * 0.8, 0.95, -1.7);
+  for (let index = 0; index < 7; index += 1) {
+    const column = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.17, 2.05, 14), material);
+    column.position.set(-2.25 + index * 0.75, 1.18, -2.05);
     columns.add(column);
   }
   return columns;
+};
+
+const createWindows = () => {
+  const group = new THREE.Group();
+  const material = new THREE.MeshLambertMaterial({ color: 0x9ec7d6 });
+  const frame = new THREE.MeshLambertMaterial({ color: 0xf0e6cf });
+  const xs = [-4.2, -3.35, -2.1, -1.05, 1.05, 2.1, 3.35, 4.2];
+  xs.forEach((x, index) => {
+    const window = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.52, 0.05), material);
+    const trim = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.64, 0.035), frame);
+    const y = index === 0 || index === xs.length - 1 ? 1.38 : 1.72;
+    window.position.set(x, y, -1.94);
+    trim.position.set(x, y, -1.97);
+    group.add(trim, window);
+  });
+  return group;
+};
+
+const createClock = () => {
+  const group = new THREE.Group();
+  const face = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.06, 24), new THREE.MeshLambertMaterial({ color: 0xf7f1dc }));
+  const handA = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.28, 0.035), new THREE.MeshLambertMaterial({ color: 0x2f3432 }));
+  const handB = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.04, 0.035), new THREE.MeshLambertMaterial({ color: 0x2f3432 }));
+  face.rotation.x = Math.PI / 2;
+  face.position.set(0, 4.78, -0.76);
+  handA.position.set(0, 4.83, -0.8);
+  handB.position.set(0.08, 4.78, -0.8);
+  group.add(face, handA, handB);
+  return group;
 };
 
 const createFlag = () => {
   const flag = new THREE.Group();
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.4, 8), new THREE.MeshLambertMaterial({ color: 0x4b4b4b }));
   const cloth = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.32, 0.04), new THREE.MeshBasicMaterial({ color: 0x2f7d68 }));
-  pole.position.y = 5.85;
-  cloth.position.set(0.28, 6.15, 0);
+  pole.position.y = 7.55;
+  cloth.position.set(0.28, 7.85, 0);
   flag.add(pole, cloth);
   return flag;
 };

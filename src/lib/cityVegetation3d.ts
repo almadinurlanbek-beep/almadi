@@ -20,11 +20,11 @@ export const createVegetation = (tiles: MapTile[]) => {
 const isEmptyLot = (tile: MapTile) => tile.model === 'lot' && tile.variant === 'lot' && !tile.buildingId;
 
 const shouldPlaceTree = (tile: MapTile) => {
-  return (tile.x * 17 + tile.y * 23) % 19 === 0;
+  return (tile.x * 17 + tile.y * 23) % 27 === 0;
 };
 
 const shouldPlaceBush = (tile: MapTile) => {
-  return (tile.x * 11 + tile.y * 7) % 13 === 0;
+  return (tile.x * 11 + tile.y * 7) % 21 === 0;
 };
 
 const createTreeTrunks = (tiles: MapTile[]) => {

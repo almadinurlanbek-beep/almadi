@@ -207,6 +207,61 @@
   padding: 8px 10px;
 }
 
+.device-picker {
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid rgba(23, 49, 71, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 14px 34px rgba(23, 49, 71, 0.1);
+  display: grid;
+  gap: 12px;
+  max-width: 620px;
+  padding: 14px;
+  width: min(620px, calc(100vw - 32px));
+}
+
+.device-picker h2 {
+  color: #173147;
+  font-size: 22px;
+  margin: 2px 0 0;
+}
+
+.device-options {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.device-option {
+  background: rgba(240, 246, 243, 0.92);
+  color: #1f453d;
+  display: grid;
+  gap: 5px;
+  justify-items: center;
+  min-height: 118px;
+  padding: 13px;
+  text-align: center;
+}
+
+.device-option.active {
+  background: linear-gradient(180deg, #378b75, #2f7d68);
+  color: #fff;
+}
+
+.device-option span {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.device-option strong,
+.device-option small {
+  color: currentColor;
+}
+
+.device-option small {
+  line-height: 1.3;
+  opacity: 0.82;
+}
+
 .start-help {
   background: rgba(255, 255, 255, 0.74);
   border: 1px solid rgba(23, 49, 71, 0.12);
@@ -249,4 +304,25 @@
 @keyframes cloudDrift {
   0%, 100% { margin-left: -18px; }
   50% { margin-left: 18px; }
+}
+
+@media (max-width: 620px) {
+  .start-menu {
+    overflow-y: auto;
+    padding: 16px 0;
+  }
+
+  .start-content {
+    gap: 12px;
+    padding: 18px 12px;
+    width: 100%;
+  }
+
+  .device-options {
+    grid-template-columns: 1fr;
+  }
+
+  .device-option {
+    min-height: 94px;
+  }
 }

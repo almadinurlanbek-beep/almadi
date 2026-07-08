@@ -1,3 +1,4 @@
+import { useLanguage, type Language } from '../lib/i18n';
 import type { EventNotification } from '../lib/useEventNotifications';
 
 type Props = {
@@ -6,6 +7,7 @@ type Props = {
 };
 
 export function EventNotifications({ notifications, onDismiss }: Props) {
+  const { language } = useLanguage();
   if (notifications.length === 0) return null;
 
   return (
@@ -17,7 +19,7 @@ export function EventNotifications({ notifications, onDismiss }: Props) {
           key={notification.id}
           onClick={() => onDismiss(notification.id)}
         >
-          <strong>{getTitle(notification.kind)}</strong>
+          <strong>{notificationTitle[language][notification.kind]}</strong>
           <span>{notification.text}</span>
         </button>
       ))}
@@ -25,8 +27,8 @@ export function EventNotifications({ notifications, onDismiss }: Props) {
   );
 }
 
-const getTitle = (kind: EventNotification['kind']) => {
-  if (kind === 'success') return 'Готово';
-  if (kind === 'warning') return 'Важно';
-  return 'Событие';
+const notificationTitle: Record<Language, Record<EventNotification['kind'], string>> = {
+  ru: { info: 'Событие', success: 'Готово', warning: 'Важно' },
+  en: { info: 'Event', success: 'Done', warning: 'Important' },
+  kk: { info: 'Оқиға', success: 'Дайын', warning: 'Маңызды' },
 };

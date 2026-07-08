@@ -6,6 +6,7 @@ export const startingMoney = 1000000;
 export const moneyGrantAmount = 1000000;
 export const moneyGrantVersion = 1;
 export const firstPayoutGraceSeconds = 600;
+export const starterProtectionSeconds = 1800;
 
 export const buildings: Building[] = [
   { id: 'shops', name: 'Магазин', icon: '🏪', cost: 10000, buildSeconds: 45, description: '+$120 в мин., строится 45 сек.' },
@@ -54,6 +55,7 @@ export const initialCity: CityStats = {
   taxRate: 12,
   moneyGrantVersion,
   residentPayoutSeconds: firstPayoutGraceSeconds,
+  starterProtectionSeconds,
   happiness: 50,
   health: 70,
   safety: 50,

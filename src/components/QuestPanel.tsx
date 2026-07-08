@@ -1,9 +1,11 @@
-import { getAiQuestProgress, type AiQuest } from '../lib/aiQuests';
+import type { AiQuest } from '../lib/aiQuests';
 import { formatMoney } from '../lib/format';
-import { getHourlyQuestStatuses, getNextHourlyQuestText, type HourlyQuestStatus } from '../lib/hourlyQuests';
-import { getQuestStatuses, type QuestStatus } from '../lib/quests';
+import { getHourlyQuestStatuses, getNextHourlyQuestText } from '../lib/hourlyQuests';
+import { getSelectedQuest, type SelectedQuestCard } from '../lib/questSelection';
+import { translateQuest } from '../lib/questTranslations';
+import { getQuestStatuses } from '../lib/quests';
 import type { CityStats } from '../lib/gameTypes';
-import { useLanguage } from '../lib/i18n';
+import { useLanguage, type Language } from '../lib/i18n';
 
 type Props = {
   aiQuest: AiQuest | null;
@@ -16,26 +18,17 @@ type Props = {
   onGenerateAiQuest: () => void;
 };
 
-type QuestCard = {
-  id: string;
-  title: string;
-  description: string;
-  progress: number;
-  target: number;
-  reward: number;
-  completed: boolean;
-  rewardBuildingName?: string;
-};
-
 export function QuestPanel({ aiQuest, aiQuestLoading, selectedQuestId, stats, onClaimAiQuest, onClaimHourlyQuest, onClaim, onGenerateAiQuest }: Props) {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const mayorQuests = getQuestStatuses(stats).filter((quest) => !quest.claimed);
   const hourlyQuests = getHourlyQuestStatuses(stats);
   const nextHourlyText = getNextHourlyQuestText(stats);
   const selected = getSelectedQuest(selectedQuestId, aiQuest, stats, mayorQuests, hourlyQuests);
+  const translatedSelected = selected ? { ...selected, quest: translateQuest(selected.quest, selected.kind, language) } : null;
+  const text = questPanelText[language];
 
   return (
-    <section className="panel quest-panel">
+    <section className="panel quest-panel" id="quest-panel">
       <div className="quest-heading">
         <div>
           <p className="eyebrow">{t('quests')}</p>
@@ -45,14 +38,14 @@ export function QuestPanel({ aiQuest, aiQuestLoading, selectedQuestId, stats, on
           {aiQuestLoading ? t('aiThinking') : aiQuest ? t('aiQuestExists') : t('aiTask')}
         </button>
       </div>
-      {selected ? (
+      {translatedSelected ? (
         <QuestCardView
-          quest={selected.quest}
-          kind={selected.kind}
+          quest={translatedSelected.quest}
+          kind={translatedSelected.kind}
           onClaim={() => {
-            if (selected.kind === 'ai') onClaimAiQuest();
-            if (selected.kind === 'hourly') onClaimHourlyQuest(selected.quest.id);
-            if (selected.kind === 'mayor') onClaim(selected.quest.id);
+            if (translatedSelected.kind === 'ai') onClaimAiQuest();
+            if (translatedSelected.kind === 'hourly') onClaimHourlyQuest(translatedSelected.quest.id);
+            if (translatedSelected.kind === 'mayor') onClaim(translatedSelected.quest.id);
           }}
           t={t}
         />
@@ -60,14 +53,14 @@ export function QuestPanel({ aiQuest, aiQuestLoading, selectedQuestId, stats, on
         <div className="quest-map-hint">
           <strong>{t('tapQuest')}</strong>
           <small>{t('questHint')}</small>
-          {nextHourlyText && <small>Новые ежечасные квесты через {nextHourlyText}</small>}
+          {nextHourlyText && <small>{text.nextHourly} {nextHourlyText}</small>}
         </div>
       )}
     </section>
   );
 }
 
-function QuestCardView({ quest, kind, onClaim, t }: { quest: QuestCard; kind: 'ai' | 'hourly' | 'mayor'; onClaim: () => void; t: ReturnType<typeof useLanguage>['t'] }) {
+function QuestCardView({ quest, kind, onClaim, t }: { quest: SelectedQuestCard; kind: 'ai' | 'hourly' | 'mayor'; onClaim: () => void; t: ReturnType<typeof useLanguage>['t'] }) {
   return (
     <article className={`quest-item ${quest.completed ? 'ready' : ''} ${kind === 'ai' ? 'ai-quest' : ''} ${kind === 'hourly' ? 'hourly-quest' : ''}`}>
       <div>
@@ -89,21 +82,8 @@ function QuestCardView({ quest, kind, onClaim, t }: { quest: QuestCard; kind: 'a
   );
 }
 
-const getSelectedQuest = (
-  selectedQuestId: string | null,
-  aiQuest: AiQuest | null,
-  stats: CityStats,
-  mayorQuests: QuestStatus[],
-  hourlyQuests: HourlyQuestStatus[],
-) => {
-  if (!selectedQuestId) return null;
-  if (aiQuest?.id === selectedQuestId) {
-    const progress = getAiQuestProgress(aiQuest, stats);
-    return { kind: 'ai' as const, quest: { ...aiQuest, progress, completed: progress >= aiQuest.target } };
-  }
-  const hourly = hourlyQuests.find((quest) => quest.id === selectedQuestId);
-  if (hourly) return { kind: 'hourly' as const, quest: hourly };
-  const mayor = mayorQuests.find((quest) => quest.id === selectedQuestId);
-  if (mayor) return { kind: 'mayor' as const, quest: mayor };
-  return null;
+const questPanelText: Record<Language, { nextHourly: string }> = {
+  en: { nextHourly: 'New hourly quests in' },
+  ru: { nextHourly: 'Новые ежечасные квесты через' },
+  kk: { nextHourly: 'Жаңа сағаттық квесттер' },
 };

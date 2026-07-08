@@ -86,18 +86,54 @@
   width: 100%;
 }
 
+.game.device-phone .city-3d-viewport {
+  height: min(64vh, 520px);
+  min-height: 390px;
+}
+
 @media (max-width: 620px) {
+  .map-panel {
+    padding: 8px;
+  }
+
+  .map-title {
+    margin-bottom: 6px;
+  }
+
+  .map-title small {
+    display: none;
+  }
+
   .map-quest-overlay {
-    left: 8px;
-    right: 8px;
-    top: 8px;
+    gap: 5px;
+    left: 7px;
+    max-height: 92px;
+    overflow: auto;
+    right: 7px;
+    top: 7px;
   }
 
   .map-quest-marker {
-    max-width: 145px;
+    max-width: 132px;
+    min-height: 40px;
+    padding: 6px;
+  }
+
+  .map-quest-marker strong {
+    max-width: 88px;
   }
 
   .city-3d-viewport {
-    height: 520px;
+    border-radius: 8px;
+    height: min(66vh, 560px);
+    min-height: 430px;
+    touch-action: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .city-3d-viewport {
+    height: min(68vh, 580px);
+    min-height: 450px;
   }
 }

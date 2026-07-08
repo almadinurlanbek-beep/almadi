@@ -1,6 +1,6 @@
 .country-panel {
   align-items: end; display: grid; gap: 14px;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
 }
 
 .country-panel strong { display: block; font-size: 20px; margin-top: 4px; }
@@ -104,6 +104,68 @@
 .friends-panel {
   display: grid;
   gap: 8px;
+}
+
+.leaderboard-panel {
+  display: grid;
+  gap: 9px;
+}
+
+.leaderboard-heading {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.leaderboard-heading button {
+  white-space: nowrap;
+}
+
+.leaderboard-list {
+  display: grid;
+  gap: 7px;
+}
+
+.leaderboard-item {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 28px 1fr auto;
+  padding: 8px 9px;
+}
+
+.leaderboard-item.mine {
+  background: #fffaf0;
+  border-color: rgba(196, 139, 53, 0.38);
+}
+
+.leaderboard-item span {
+  align-items: center;
+  background: #f0f6f3;
+  border: 1px solid rgba(47, 125, 104, 0.2);
+  border-radius: 999px;
+  color: var(--accent-dark);
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 900;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.leaderboard-item strong,
+.leaderboard-item small {
+  display: block;
+}
+
+.leaderboard-item b {
+  color: var(--accent-dark);
+  font-size: 14px;
+  white-space: nowrap;
 }
 
 .friends-heading {
@@ -324,6 +386,9 @@
   .country-panel { grid-template-columns: 1fr; }
   .daily-reward { grid-template-columns: 1fr; }
   .friend-add, .friend-item { grid-template-columns: 1fr; }
+  .leaderboard-heading { align-items: stretch; flex-direction: column; }
+  .leaderboard-item { grid-template-columns: 28px 1fr; }
+  .leaderboard-item b { grid-column: 2; }
   .playtime-list { grid-template-columns: 1fr; }
   .advisor-heading { align-items: stretch; flex-direction: column; }
   .quest-heading { align-items: stretch; flex-direction: column; }

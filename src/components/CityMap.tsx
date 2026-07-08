@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createCityTiles } from '../lib/cityMap';
 import { buildings } from '../lib/gameData';
 import { formatMoney } from '../lib/format';
-import { getBuildingText, useLanguage } from '../lib/i18n';
+import { getBuildingText, useLanguage, type Language } from '../lib/i18n';
 import type { BuildingId, CityStats, TilePoint } from '../lib/gameTypes';
 import type { QuestMapMarker } from '../lib/questMapMarkers';
 import { CityMap3D } from './CityMap3D';
@@ -40,13 +40,13 @@ export function CityMap({ readOnly = false, questMarkers, stats, onDeleteBuildin
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-    if (readOnly || event.key.toLowerCase() !== 'r' || !selected) return;
+      if (readOnly || event.key.toLowerCase() !== 'r' || !selected) return;
       event.preventDefault();
       onRotateBuilding(selected.buildingId, selected.index, selected.point);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onRotateBuilding, selected]);
+  }, [onRotateBuilding, readOnly, selected]);
 
   const handleTileClick = (point: TilePoint) => {
     const building = findBuildingNear(point, tiles);
@@ -68,7 +68,7 @@ export function CityMap({ readOnly = false, questMarkers, stats, onDeleteBuildin
   const handleBuildingDrop = (building: Omit<SelectedBuilding, 'point'>, point: TilePoint) => {
     onMoveBuilding(building.buildingId, building.index, point);
     setMoving(false);
-    setSelected(selected && selected.buildingId === building.buildingId && selected.index === building.index ? selected : null);
+    setSelected({ ...building, point });
   };
 
   const handleDelete = () => {
@@ -79,7 +79,7 @@ export function CityMap({ readOnly = false, questMarkers, stats, onDeleteBuildin
   };
 
   return (
-    <section className="panel map-panel">
+    <section className="panel map-panel" id="city-map">
       <div className="map-title">
         <p className="eyebrow">{t('mapTitle')}</p>
         {!readOnly && questMarkers.length > 0 && <small>{t('mapHint')}</small>}
@@ -95,7 +95,7 @@ export function CityMap({ readOnly = false, questMarkers, stats, onDeleteBuildin
           onBuildingDrop={handleBuildingDrop}
         />
         {!readOnly && questMarkers.length > 0 && (
-          <div className="map-quest-overlay" aria-label="Квесты на карте">
+          <div className="map-quest-overlay" aria-label={mapQuestLabel[language]}>
             {questMarkers.slice(0, 8).map((marker) => (
               <button
                 type="button"
@@ -153,8 +153,13 @@ const findBuildingNear = (point: TilePoint, tiles: ReturnType<typeof createCityT
 
 const getQuestMarkerIcon = (marker: QuestMapMarker) => {
   if (marker.completed) return '✓';
-  const { kind } = marker;
-  if (kind === 'ai') return 'AI';
-  if (kind === 'hourly') return '!';
+  if (marker.kind === 'ai') return 'AI';
+  if (marker.kind === 'hourly') return '!';
   return '?';
+};
+
+const mapQuestLabel: Record<Language, string> = {
+  en: 'Quests on the map',
+  ru: 'Квесты на карте',
+  kk: 'Картадағы квесттер',
 };

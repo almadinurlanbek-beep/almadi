@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLanguage, type Language } from '../lib/i18n';
 import { supabase } from '../lib/supabase';
 
 type Props = {
@@ -6,6 +7,8 @@ type Props = {
 };
 
 export function StartAuthForm({ onReady }: Props) {
+  const { language } = useLanguage();
+  const text = authText[language];
   const [showSignIn, setShowSignIn] = useState(false);
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
@@ -48,17 +51,17 @@ export function StartAuthForm({ onReady }: Props) {
   if (!showSignIn) {
     return (
       <div className="start-auth">
-        <strong>Выбери вход</strong>
+        <strong>{text.chooseSignIn}</strong>
         <div className="start-actions">
           <button type="button" className="start-button" onClick={onReady}>
-            Войти как гость
+            {text.guest}
           </button>
           <button type="button" className="start-button secondary" onClick={() => setShowSignIn(true)}>
-            Войти
+            {text.signIn}
           </button>
         </div>
         <button type="button" className="google-button" disabled={busy} onClick={handleGoogleSignIn}>
-          Войти через Google
+          {text.google}
         </button>
         {message && <small className="auth-message">{message}</small>}
       </div>
@@ -67,10 +70,10 @@ export function StartAuthForm({ onReady }: Props) {
 
   return (
     <form className="start-auth" onSubmit={handleSubmit}>
-      <strong>Вход</strong>
+      <strong>{text.signIn}</strong>
       <input
         type="text"
-        placeholder="логин или email"
+        placeholder={text.loginPlaceholder}
         value={login}
         onChange={(event) => setLogin(event.target.value)}
         minLength={3}
@@ -78,20 +81,20 @@ export function StartAuthForm({ onReady }: Props) {
       />
       <input
         type="password"
-        placeholder="пароль"
+        placeholder={text.passwordPlaceholder}
         value={password}
         onChange={(event) => setPassword(event.target.value)}
         minLength={6}
         required
       />
       <button type="submit" className="start-button" disabled={busy}>
-        {busy ? 'Подожди...' : 'Войти'}
+        {busy ? text.wait : text.signIn}
       </button>
       <button type="button" className="google-button" disabled={busy} onClick={handleGoogleSignIn}>
-        Войти через Google
+        {text.google}
       </button>
       <button type="button" className="link-button" onClick={() => setShowSignIn(false)}>
-        Назад
+        {text.back}
       </button>
       {message && <small className="auth-message">{message}</small>}
     </form>
@@ -103,4 +106,46 @@ const toAuthEmail = (login: string) => {
   if (trimmed.includes('@')) return trimmed;
   const safeLogin = trimmed.replace(/[^a-z0-9._-]/g, '');
   return `${safeLogin}@almadi.local`;
+};
+
+const authText: Record<Language, {
+  back: string;
+  chooseSignIn: string;
+  google: string;
+  guest: string;
+  loginPlaceholder: string;
+  passwordPlaceholder: string;
+  signIn: string;
+  wait: string;
+}> = {
+  en: {
+    back: 'Back',
+    chooseSignIn: 'Choose sign in',
+    google: 'Sign in with Google',
+    guest: 'Continue as guest',
+    loginPlaceholder: 'login or email',
+    passwordPlaceholder: 'password',
+    signIn: 'Sign in',
+    wait: 'Wait...',
+  },
+  ru: {
+    back: 'Назад',
+    chooseSignIn: 'Выбери вход',
+    google: 'Войти через Google',
+    guest: 'Войти как гость',
+    loginPlaceholder: 'логин или email',
+    passwordPlaceholder: 'пароль',
+    signIn: 'Войти',
+    wait: 'Подожди...',
+  },
+  kk: {
+    back: 'Артқа',
+    chooseSignIn: 'Кіру түрін таңда',
+    google: 'Google арқылы кіру',
+    guest: 'Қонақ ретінде кіру',
+    loginPlaceholder: 'логин немесе email',
+    passwordPlaceholder: 'құпиясөз',
+    signIn: 'Кіру',
+    wait: 'Күте тұр...',
+  },
 };
